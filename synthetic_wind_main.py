@@ -59,10 +59,10 @@ u_mean = 15 #km: the mean wind speed
 
 # Scan 0 geometry input
 # rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 
-'''km:definition of the scaner 0 minimum and maximum radial distance
-minimum and maximum azimuth angle origin as an array x_0,y_0'''
+"""km:definition of the scaner 0 minimum and maximum radial distance
+minimum and maximum azimuth angle origin as an array x_0,y_0"""
 rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = 105,7000,198,256,344,45,np.array([6322832.3,0])
-rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0) #km: tupple that contains the definition of the scanner0
+rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0) #km: tuple that contains the definition of the scanner0
 
 # Scan 1 geometry input
 # rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1
