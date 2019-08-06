@@ -295,10 +295,10 @@ def early_weights_kernel(r, phi, dir_mean , tri, d, center, n=21, m=51):
 # In[Geometry generation]
 # input for numerical lidar
 def geom_polar_grid(rmin,rmax,nr,phimin,phimax,nphi,d):
-    r = np.linspace(rmin,rmax,nr)
-    phi = np.linspace(phimin,phimax,nphi)*np.pi/180  
-    r_g, phi_g = np.meshgrid(r,phi)
-    r_t,phi_t = wr.translationpolargrid((r_g, np.pi-phi_g),d/2)
+    r = np.linspace(rmin,rmax,nr)#km: create nr grid points on radial direction 
+    phi = np.linspace(phimin,phimax,nphi)*np.pi/180  #km: create nphi grid points on azimuth direction 
+    r_g, phi_g = np.meshgrid(r,phi)#km: construct the polar grid and save cordinates in r_g and phi_g
+    r_t,phi_t = wr.translationpolargrid((r_g, np.pi-phi_g),d/2)#translate the polar grid 
     return (r_g, phi_g, r_t, phi_t)
     
 def geom_syn_field(rp0, rp1, N_x, N_y):    
