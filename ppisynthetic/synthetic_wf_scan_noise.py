@@ -295,10 +295,18 @@ def early_weights_kernel(r, phi, dir_mean , tri, d, center, n=21, m=51):
 # In[Geometry generation]
 # input for numerical lidar
 def geom_polar_grid(rmin,rmax,nr,phimin,phimax,nphi,d):
-    r = np.linspace(rmin,rmax,nr)#km: create nr grid points on radial direction 
-    phi = np.linspace(phimin,phimax,nphi)*np.pi/180  #km: create nphi grid points on azimuth direction 
-    r_g, phi_g = np.meshgrid(r,phi)#km: construct the polar grid and save cordinates in r_g and phi_g
-    r_t,phi_t = wr.translationpolargrid((r_g, np.pi-phi_g),d/2)#translate the polar grid 
+    r = np.linspace(rmin,rmax,nr)
+    #km: create nr grid points on radial direction
+    """answer la: yes"""
+    phi = np.linspace(phimin,phimax,nphi)*np.pi/180
+    #km: create nphi grid points on azimuth direction
+    """answer la: yes"""
+    r_g, phi_g = np.meshgrid(r,phi)
+    #km: construct the polar grid and save cordinates in r_g and phi_g
+    """answer la: yes"""
+    r_t,phi_t = wr.translationpolargrid((r_g, np.pi-phi_g),d/2)
+    #translate the polar grid
+    """answer la: yes"""
     return (r_g, phi_g, r_t, phi_t)
     
 def geom_syn_field(rp0, rp1, N_x, N_y):    
@@ -309,18 +317,40 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)
     r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,d)
     x_max = np.max(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
-    x_min = np.min(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])#km: why you use only the translated coordinate systems?
+    x_min = np.min(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])
+    #km: why you use only the translated coordinate systems? 
+    """ answer la: because when translated both scans are in the same polar coordinate system and represent the size of the whole domain
+                   that will be used later in the synthetic wind field generation. This is not our case since the domain might be several times
+                   bigger than the domain covered by the two scans, since it is moving
+    """
     y_max = np.max(np.r_[(r_0_t*np.sin(phi_0_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten()])
     y_min = np.min(np.r_[(r_0_t*np.sin(phi_0_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten()]) 
-    L_x = x_max-x_min#km: length of the synthetic domain in x direction 
-    L_y = y_max-y_min#km: length of the synthetic domain in y direction
-    x = np.linspace(x_min,x_max,N_x)#km:new x discretization over the synthetic region? 
-    y = np.linspace(y_min,y_max,N_y)#km:new y discretization over the synthetic region ?
-    grid = np.meshgrid(x,y) #km:overlap cartesian grid ? (N_y x N_x x 2)
-    tri = Delaunay(np.c_[grid[0].flatten(),grid[1].flatten()], qhull_options = "QJ") #km: Delauney triangulation of the grid Why dont you triangulate the whole output of the mann model? np.c_ stacks the vectors and creates sets of points      
+    L_x = x_max-x_min
+    #km: length of the synthetic domain in x direction 
+    """answer la: yes"""
+    L_y = y_max-y_min
+    #km: length of the synthetic domain in y direction
+    """answer la: yes"""
+    x = np.linspace(x_min,x_max,N_x)
+    #km:new x discretization over the synthetic region? 
+    """answer la: yes, after knowing the limits of the squared domain covered by the scan, the grid is defined in x"""
+    y = np.linspace(y_min,y_max,N_y)
+    #km:new y discretization over the synthetic region ?
+    """answer la: yes, after knowing the limits of the squared domain covered by the scan, the grid is defined in y"""
+    grid = np.meshgrid(x,y) 
+    #km:overlap cartesian grid ? (N_y x N_x x 2)
+    """answer la: it is just the cartesian grid for the synthetic wind filed"""
+    tri = Delaunay(np.c_[grid[0].flatten(),grid[1].flatten()], qhull_options = "QJ")
+    #km: Delauney triangulation of the grid Why dont you triangulate the whole output of the mann model? np.c_ stacks the vectors and creates sets of points      
+    """answer la: Since the points we will use to interpolate on the scans grid points correspond to the ones in the synthetic wind field,
+    the triangulation is done over the wind field cartesian grid. The output of the Mann's turbulence box are u and v,
+    the grid (or at least the parameters of the gird, like L_x, L_y and N_x and N_y) is an input, defined previously. The Delaunay trinagulation is an scipy object
+    that allows for example the identification of the corresponding triangle for a particular point (interpolation) and can
+    be used as an input for a cubic interpolator for example"""
     # Square grid for reconstruction
     _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
-    
+    """ Comment: this is a finction in windfieldrec, that define the tringulation of the intersection points
+    of beams coming form the two scans """
     r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
     d_grid = r_min*2*np.pi/180
     n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2))) 

@@ -18,7 +18,8 @@ import tkinter.filedialog
 
 from os import listdir
 from os.path import isfile, join
-#km:importing functions from folders 
+#km:importing functions from folders
+"""answer la: yes""" 
 import ppiscanprocess.windfieldrec as wr
 import ppisynthetic.synthetic_wf_scan_noise as sy
 import ppiscanprocess.spectra_construction as sc
@@ -52,17 +53,23 @@ N_x = 2048
 N_y = 2048
 
 # Mean wind speed and Direction
-Dir = np.linspace(90,270,7)*np.pi/180#km: a vector of 7 directions from 90 to 270 deg in rads
+Dir = np.linspace(90,270,7)*np.pi/180
+#km: a vector of 7 directions from 90 to 270 deg in rads
+"""answer la: yes""" 
 
-u_mean = 15 #km: the mean wind speed
-
+u_mean = 15
+ #km: the mean wind speed
+"""answer la: yes, we can change this and make an array of wind speeds""" 
 
 # Scan 0 geometry input
 # rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 
 """km:definition of the scaner 0 minimum and maximum radial distance
 minimum and maximum azimuth angle origin as an array x_0,y_0"""
+"""answer la: yes""" 
 rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = 105,7000,198,256,344,45,np.array([6322832.3,0])
-rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0) #km: tuple that contains the definition of the scanner0
+rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0)
+ #km: tuple that contains the definition of the scanner0
+ """answer la: yes""" 
 
 # Scan 1 geometry input
 # rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1
@@ -70,7 +77,9 @@ rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = 105,7000,198,196,284,45,np.array([63
 rp1 = (rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1)
 
 # Grids, polar and cartesian
-d = orig1-orig0#km: since they have the same y d[0] holds the distance of the scanners
+d = orig1-orig0
+#km: since they have the same y d[0] holds the distance of the scanners
+"""answer la: yes""" 
 
 # Polar grids for Scan 0 (local and translated)
 r_0_g, phi_0_g, r_0_t, phi_0_t = sy.geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)

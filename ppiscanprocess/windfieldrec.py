@@ -153,11 +153,21 @@ def grid_over2(mg0, mg1, d):
     """
     # Polar grid resolution is used as nearest neighbour distance to estimate
     # overlaping scanning area
-    dr = min(np.diff(np.unique(mg0[0].flatten())))/2#km: calculate the grid spacing in the radial direction. but why in this way? 
-    dp = min(np.diff(np.unique(mg0[1].flatten())))/2#km: calculate the grid spacing step in the azimuth direction   
+    dr = min(np.diff(np.unique(mg0[0].flatten())))/2
+    #km: calculate the grid spacing in the radial direction. but why in this way? 
+    """answer la: This was the first function I wrote for the while set I think,
+    not the most efficient, feel free to improve it""" 
+    dp = min(np.diff(np.unique(mg0[1].flatten())))/2
+    #km: calculate the grid spacing step in the azimuth direction   
+        """answer la: This was the first function I wrote for the while set I think,
+    not the most efficient, feel free to improve it""" 
     # Translation of grids
-    r0, p0 = translationpolargrid(mg0,-d/2)#km: move the first scanner's polar grid d/2 to the negative direction
-    r1, p1 = translationpolargrid(mg1,d/2) #km: move the second scanner's polar grid d/2 to the positive direction
+    r0, p0 = translationpolargrid(mg0,-d/2)
+    #km: move the first scanner's polar grid d/2 to the negative direction
+    """answer la: yes""" 
+    r1, p1 = translationpolargrid(mg1,d/2)
+    #km: move the second scanner's polar grid d/2 to the positive direction
+    """answer la: yes"""
     # Overlapping points
     r_o_0, p_o_0, i_o_0 = nearestpoint((r0,p0),(r1,p1),dr,dp)
     r_o_1, p_o_1, i_o_1 = nearestpoint((r1,p1),(r0,p0),dr,dp)
