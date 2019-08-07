@@ -62,7 +62,7 @@ def nearestpoint(mg0,mg1,dr,dp):
     -----
         mg0      - Tuple with (r0,p0), points in polar coordinates of the first scan in a common
                    frame. This means that the local PPI scan coordinates must be translated to a
-                   common point with the other scans.
+                   common point(km:or common grid) with the other scans.
         
         mg1      - Tuple with (r1,p1), points in polar coordinates of the first scan in a common
                    frame. This means that the local PPI scan coordinates must be translated to a
@@ -153,11 +153,11 @@ def grid_over2(mg0, mg1, d):
     """
     # Polar grid resolution is used as nearest neighbour distance to estimate
     # overlaping scanning area
-    dr = min(np.diff(np.unique(mg0[0].flatten())))/2
-    dp = min(np.diff(np.unique(mg0[1].flatten())))/2   
+    dr = min(np.diff(np.unique(mg0[0].flatten())))/2#km: calculate the grid spacing in the radial direction. but why in this way? 
+    dp = min(np.diff(np.unique(mg0[1].flatten())))/2#km: calculate the grid spacing step in the azimuth direction   
     # Translation of grids
-    r0, p0 = translationpolargrid(mg0,-d/2)
-    r1, p1 = translationpolargrid(mg1,d/2) 
+    r0, p0 = translationpolargrid(mg0,-d/2)#km: move the first scanner's polar grid d/2 to the negative direction
+    r1, p1 = translationpolargrid(mg1,d/2) #km: move the second scanner's polar grid d/2 to the positive direction
     # Overlapping points
     r_o_0, p_o_0, i_o_0 = nearestpoint((r0,p0),(r1,p1),dr,dp)
     r_o_1, p_o_1, i_o_1 = nearestpoint((r1,p1),(r0,p0),dr,dp)
