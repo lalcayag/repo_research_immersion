@@ -99,6 +99,8 @@ r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
 phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
 r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
 r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
+"""answer la: So this wis just  step to recover the original azimuth angle for each scan (local coordinates for each scan)
+               this time in the corresponding points of the synthetic wind field in cartesian coordinates, to be used in wind field reconstruction""" 
 
 # Mann-model parameters
 ae = [0.025, 0.05, 0.075]
