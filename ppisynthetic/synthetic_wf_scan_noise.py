@@ -314,8 +314,9 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = rp0
     rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = rp1 
     d = orig1-orig0     
-    r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)
+    r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)#km2: you translate it again because you pass only the tuple as an input
     r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,d)
+    #km2: I think that this should be changed in the new version where we have to triangulate the whole long field
     x_max = np.max(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
     x_min = np.min(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])
     #km: why you use only the translated coordinate systems? 

@@ -64,7 +64,7 @@ def nearestpoint(mg0,mg1,dr,dp):
                    frame. This means that the local PPI scan coordinates must be translated to a
                    common point(km:or common grid) with the other scans.
         
-        mg1      - Tuple with (r1,p1), points in polar coordinates of the first scan in a common
+        mg1      - Tuple with (r1,p1), points in polar coordinates of the first #km2:second scan in a common
                    frame. This means that the local PPI scan coordinates must be translated to a
                    common point with the other scans.
         
@@ -93,13 +93,15 @@ def nearestpoint(mg0,mg1,dr,dp):
         dist1 = np.sqrt((r0-r1[i])**2)
         dist2 = np.sqrt((p0-p1[i])**2)
         # Index of points in scan 1 within a neighbourhood dr x dp
-        ind = ((dist1<=dr) & (dist2<=dp)).nonzero()[0] 
+        ind = ((dist1<=dr) & (dist2<=dp)).nonzero()[0] #km2: if the distance between a point of scan0 and a point of scan1 is less than the spacing of the polar grids  keep the index of scan1
+        #km2: but there is not any possibility to keep points that they are just outside (in a distance that fulfills the conditions) of the common area? 
+        
         # Append of those points
         raux.append(r0[ind])
         paux.append(p0[ind])
         iaux.append(ind)
     # Flatten list    
-    r_flat= [item for sublist in raux for item in sublist]
+    r_flat= [item for sublist in raux for item in sublist]#km2: you do this to have different indexes for each element?
     p_flat= [item for sublist in paux for item in sublist]
     i_flat= [item for sublist in iaux for item in sublist]
     # List with corresponding r and azimuth coordinates of nearest points, and corresponding index
@@ -122,7 +124,7 @@ def grid_over2(mg0, mg1, d):
     Input:
     -----
         mg0      - Tuple with (r0,p0), points in polar coordinates of the first scan in local frame
-                   and non translated.
+                   and non translated.#km2: However, rotated polar grids so (r0,np.pi-p0)
         
         mg1      - Tuple with (r1,p1), points in polar coordinates of the first scan in local frame
                    and non translated.
@@ -169,22 +171,22 @@ def grid_over2(mg0, mg1, d):
     #km: move the second scanner's polar grid d/2 to the positive direction
     """answer la: yes"""
     # Overlapping points
-    r_o_0, p_o_0, i_o_0 = nearestpoint((r0,p0),(r1,p1),dr,dp)
+    r_o_0, p_o_0, i_o_0 = nearestpoint((r0,p0),(r1,p1),dr,dp)#km2: it returns those grid points that lying on the common area of the 2 scanners
     r_o_1, p_o_1, i_o_1 = nearestpoint((r1,p1),(r0,p0),dr,dp)
     # Cartesian trees from overlapping points of each scan
-    pos0 = np.c_[r_o_0*np.cos(p_o_0),r_o_0*np.sin(p_o_0)]    
+    pos0 = np.c_[r_o_0*np.cos(p_o_0),r_o_0*np.sin(p_o_0)]#km2: the above grid points in cartesian coordinates    
     tree_0 = KDTree(pos0)
     pos1 = np.c_[r_o_1*np.cos(p_o_1),r_o_1*np.sin(p_o_1)]    
     tree_1 = KDTree(pos1)  
     # Intersection points, first iteration will find pair of points
-    ind0,dist0 = tree_0.query_radius(tree_1.data, r=3*dr/2,return_distance = True,sort_results=True)
+    ind0,dist0 = tree_0.query_radius(tree_1.data, r=3*dr/2,return_distance = True,sort_results=True)#km2: returns the indices and distance of various points within the radius 3*dr/2(why dont you use cartesian spacing?) 
     ind1,dist1 = tree_1.query_radius(tree_0.data, r=3*dr/2,return_distance = True,sort_results=True) 
     ind00 = []
     ind01 = []
     for i,j in zip(ind0,range(len(ind0))):
         if i.size > 0:
             #indices
-            ind00.append(np.asscalar(i[0]))
+            ind00.append(np.asscalar(i[0]))#km2: holds the index
             ind01.append(j)           
     ind10 = []
     ind11 = []

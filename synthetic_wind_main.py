@@ -68,8 +68,8 @@ minimum and maximum azimuth angle origin as an array x_0,y_0"""
 """answer la: yes""" 
 rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = 105,7000,198,256,344,45,np.array([6322832.3,0])
 rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0)
- #km: tuple that contains the definition of the scanner0
- """answer la: yes""" 
+#km: tuple that contains the definition of the scanner0
+"""answer la: yes""" 
 
 # Scan 1 geometry input
 # rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1
