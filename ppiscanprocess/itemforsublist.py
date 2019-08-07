@@ -4,6 +4,7 @@
 Created on Wed Aug  7 13:26:30 2019
 
 @author: konstantinos
+a script to check the  [item for sublist in raux for item in sublist]
 """
 import numpy as np
 r0=np.array([1,2,3,4,5])

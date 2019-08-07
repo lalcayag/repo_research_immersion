@@ -183,38 +183,38 @@ def grid_over2(mg0, mg1, d):
     ind1,dist1 = tree_1.query_radius(tree_0.data, r=3*dr/2,return_distance = True,sort_results=True) 
     ind00 = []
     ind01 = []
-    for i,j in zip(ind0,range(len(ind0))):
+    for i,j in zip(ind0,range(len(ind0))):#km3: I need explanation of this part 
         if i.size > 0:
             #indices
-            ind00.append(np.asscalar(i[0]))#km2: holds the index
-            ind01.append(j)           
+            ind00.append(np.asscalar(i[0]))#km3: keeps the indices ind0 
+            ind01.append(j)#km3: this why ?           
     ind10 = []
     ind11 = []
     for i,j in zip(ind1,range(len(ind1))):
         if i.size > 0:
             #indices
-            ind11.append(np.asscalar(i[0]))
+            ind11.append(np.asscalar(i[0]))#km3: the zero index is to keep the closest neighbor ?
             ind10.append(j)      
     # Center of grafity of near-intersection points
     posg0=np.c_[0.5*(pos0[:,0][ind00]+pos1[:,0][ind01]),0.5*(pos0[:,1][ind00]+pos1[:,1][ind01])] 
     posg1=np.c_[0.5*(pos0[:,0][ind10]+pos1[:,0][ind11]),0.5*(pos0[:,1][ind10]+pos1[:,1][ind11])]  
     posg = np.vstack((posg0,posg1))
     unique = [list(t) for t in zip(*list(set(zip(posg[:,0], posg[:,1]))))] 
-    posg = np.c_[unique[0],unique[1]]
+    posg = np.c_[unique[0],unique[1]]#km3: keeps all the center points between the closest ne pairs 
     tree_g = KDTree(posg)  
     # Intersection points, final iteration 
     # Identification of nearest neighbours to each preestimated intersection point
     indg, distg = tree_g.query_radius(tree_g.data, r=2*dr, return_distance = True, sort_results=True)
     S = sorted(set((tuple(sorted(tuple(i))) for i in indg if len(tuple(i))>1)))
-    nonS = [np.asscalar(i) for i in indg if len(tuple(i))==1]
+    nonS = [np.asscalar(i) for i in indg if len(tuple(i))==1]#km3: they dont have any neighbors in distance <r
     temp = [set(u) for u in S]
     S = []
     for ti in temp:
         aux = [t for t in temp if t!=ti]
         if not any(ti <= u for u in aux):
             S.append(list(ti))
-    aux=np.array([np.mean(posg[list(p),:],axis=0) for p in S])  
-    posg = np.vstack((aux,posg[nonS])) 
+    aux=np.array([np.mean(posg[list(p),:],axis=0) for p in S])#km3: holds the centers of the intersection sets of the 2 scanner grids in cartesian coordinates   
+    posg = np.vstack((aux,posg[nonS]))#km3: the aux plus the intersection points that they dont have any neighbors 
     tree_g = KDTree(posg)
     # Diastances and labels of neighbours to intersection points
     d0,n0 = tree_g.query(tree_0.data, return_distance = True)
