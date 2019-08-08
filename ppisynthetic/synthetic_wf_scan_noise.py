@@ -224,7 +224,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center, n=21, m=51):
     c_ref = np.cos(phi_t_refine-gamma)    
     r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)
     x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)
-
+###
     # Rotation and translation    
     
     x_trans = -(center)*np.sin(gamma)
@@ -348,16 +348,20 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     the grid (or at least the parameters of the gird, like L_x, L_y and N_x and N_y) is an input, defined previously. The Delaunay trinagulation is an scipy object
     that allows for example the identification of the corresponding triangle for a particular point (interpolation) and can
     be used as an input for a cubic interpolator for example"""
-    # Square grid for reconstruction
+    # Square grid for reconstruction 
+    #km4: this last part has confused me a lot. 
+    #km4: You do a triangulation of the intersection set centers of the two scanners and you use the distance of the closest vertex to define a spacing through a formula.
+    #km4: Then you generate a strctured grid based on this spacing
+    #km4: whats the purpose ?
     _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
     """ Comment: this is a finction in windfieldrec, that define the tringulation of the intersection points
     of beams coming form the two scans """
-    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
-    d_grid = r_min*2*np.pi/180
-    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2))) 
+    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))#km4: find the shortest distance from (0,0)? in cartesian coordinates
+    d_grid = r_min*2*np.pi/180#km4: splits the perimeter of the smalest circle in steps of 2 degrees ? d_grid holds this spacing? 
+    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))#km4: some kind of formula that calculates the number of points in each direction. why this formula ?
     x_new = np.linspace(x.min(),x.max(),n_next)
     y_new = np.linspace(y.min(),y.max(),n_next)
-    grid_new = np.meshgrid(x_new,y_new)
+    grid_new = np.meshgrid(x_new,y_new)#km4: a structired grid with uniform spacing in both directions in cartesian coordinates 
     
     return (L_x, L_y, grid, x, y, tri, grid_new,d)
 
