@@ -13,3 +13,5 @@ ind=[1,2,3]
 raux.append(r0[ind])   
 r_flat= [item for sublist in raux for item in sublist]
 print(r_flat)
+
+"""question la4: What is the purpose of this routine?"""

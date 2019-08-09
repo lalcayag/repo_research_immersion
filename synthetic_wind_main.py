@@ -90,9 +90,12 @@ r_1_g, phi_1_g, r_1_t, phi_1_t = sy.geom_polar_grid(rmin1,rmax1,nr1,phimin1,phim
 L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y) 
 #km4: Return the size of the in general rectangular (but now square) domain. A structured cartesian grid with N_x x N_y points. The coordinates of the grid points x y.
 #km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
-
-_,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)#km4: returns the trianguulation of the intersection set centers between the 2 scanners in cartesian coordinates
+"""answer la4: yes. grid_new is used as the recangular grid for wind field reconstruction from the values of V_LOS of each scan interpolated
+to this grid, if you see below (line 153), from grid_new phi_tri_1_s is calculated as de local (local to each Windscanner) azimuth angle used for reconstruction""" 
+_,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
+#km4: returns the trianguulation of the intersection set centers between the 2 scanners in cartesian coordinates
 #km4: If I am not wrong, this procedure is also done in the sy.geom_syn_field function 
+"""answer la4: yes, indeed it is not used afterwards,  (you can erase this line I think)""" 
 # Triangulation and weights for each scan
 dl = 75
 
@@ -101,8 +104,9 @@ r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
 phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
 r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
 r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
-"""answer la: So this wis just  step to recover the original azimuth angle for each scan (local coordinates for each scan)
-               this time in the corresponding points of the synthetic wind field in cartesian coordinates, to be used in wind field reconstruction""" 
+"""answer la4: So this wis just step to recover the original azimuth angle for each scan (local coordinates for each scan)
+              this time in the corresponding points of the reconstructed wind field in cartesian coordinates,
+              to be used in wind field reconstruction""" 
 
 # Mann-model parameters
 ae = [0.025, 0.05, 0.075]
@@ -160,6 +164,7 @@ for dir_mean in Dir:
             U,V = sy.dir_rec_rapid(vlos1_int_sq.flatten(),vlos0_int_sq.flatten(), phi_tri_1_s.flatten(),phi_tri_0_s.flatten(),grid_new[0].shape)
                 
             #Storing
+            
             vlos0_file_name = 'vlos0'+str(u_mean)+str(int(dir_mean*180/np.pi))+str(L_i)+str(G_i)+str(ae_i)+str(seed_i)
             vlos1_file_name = 'vlos1'+str(u_mean)+str(int(dir_mean*180/np.pi))+str(L_i)+str(G_i)+str(ae_i)+str(seed_i)
             U_file_name = 'U'+str(u_mean)+str(int(dir_mean*180/np.pi))+str(L_i)+str(G_i)+str(ae_i)+str(seed_i)

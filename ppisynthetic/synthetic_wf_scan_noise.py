@@ -353,15 +353,30 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     #km4: You do a triangulation of the intersection set centers of the two scanners and you use the distance of the closest vertex to define a spacing through a formula.
     #km4: Then you generate a strctured grid based on this spacing
     #km4: whats the purpose ?
+    """answer la4: As we discussed earlier, this new grid is generated to place the reconstructed wind field,
+                   The scans sample from a fine cartesian squared mesh, 
+                   to a coarser polar mesh (coarser in tue outer regin of the scan, very fine near the origin of each beam)
+                   then it is interpolated back to a cartesian suqared mesh with a different refinement, 
+                   this time depending on the smallest element size of the scan polar mesh. The V_los of each scan
+                   need to be interpolated to a squared cart. mesh to have V_los and azimuth angles from both scans at more common points
+                   than just the intersection points (with this we average less an retain more information)"""
     _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
-    """ Comment: this is a finction in windfieldrec, that define the tringulation of the intersection points
+    """ Comment: this is a function in windfieldrec, that define the tringulation of the intersection points
     of beams coming form the two scans """
-    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))#km4: find the shortest distance from (0,0)? in cartesian coordinates
-    d_grid = r_min*2*np.pi/180#km4: splits the perimeter of the smalest circle in steps of 2 degrees ? d_grid holds this spacing? 
-    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))#km4: some kind of formula that calculates the number of points in each direction. why this formula ?
+    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
+    #km4: find the shortest distance from (0,0)? in cartesian coordinates
+    """answer la4: yes, the closest to the lidars"""
+    d_grid = r_min*2*np.pi/180
+    #km4: splits the perimeter of the smalest circle in steps of 2 degrees ? d_grid holds this spacing? 
+    """answer la4: yes, 2 deg. is the azimuth step of the lidars"""
+    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))
+    #km4: some kind of formula that calculates the number of points in each direction. why this formula ?
+    """answer la4: It is a formula to estimate the the number of grid points with base 2 (the base can be any number though)"""
     x_new = np.linspace(x.min(),x.max(),n_next)
     y_new = np.linspace(y.min(),y.max(),n_next)
-    grid_new = np.meshgrid(x_new,y_new)#km4: a structired grid with uniform spacing in both directions in cartesian coordinates 
+    grid_new = np.meshgrid(x_new,y_new)
+    #km4: a structired grid with uniform spacing in both directions in cartesian coordinates 
+    """answer la4: yes"""
     
     return (L_x, L_y, grid, x, y, tri, grid_new,d)
 

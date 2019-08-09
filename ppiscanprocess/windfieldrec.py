@@ -195,31 +195,39 @@ def grid_over2(mg0, mg1, d):
             #indices
             ind11.append(np.asscalar(i[0]))#km3: the zero index is to keep the closest neighbor ?
             ind10.append(j)      
-    # Center of grafity of near-intersection points
+    # Center of gravity of near-intersection points
     posg0=np.c_[0.5*(pos0[:,0][ind00]+pos1[:,0][ind01]),0.5*(pos0[:,1][ind00]+pos1[:,1][ind01])] 
     posg1=np.c_[0.5*(pos0[:,0][ind10]+pos1[:,0][ind11]),0.5*(pos0[:,1][ind10]+pos1[:,1][ind11])]  
     posg = np.vstack((posg0,posg1))
     unique = [list(t) for t in zip(*list(set(zip(posg[:,0], posg[:,1]))))] 
-    posg = np.c_[unique[0],unique[1]]#km3: keeps all the center points between the closest neighbor pairs 
+    posg = np.c_[unique[0],unique[1]]
+    #km3: keeps all the center points between the closest neighbor pairs 
     tree_g = KDTree(posg)  
     # Intersection points, final iteration 
     # Identification of nearest neighbours to each preestimated intersection point
     indg, distg = tree_g.query_radius(tree_g.data, r=2*dr, return_distance = True, sort_results=True)
     S = sorted(set((tuple(sorted(tuple(i))) for i in indg if len(tuple(i))>1)))
-    nonS = [np.asscalar(i) for i in indg if len(tuple(i))==1]#km3: they dont have any neighbors in distance <r
+    nonS = [np.asscalar(i) for i in indg if len(tuple(i))==1]
+    #km3: they dont have any neighbors in distance <r
     temp = [set(u) for u in S]
     S = []
     for ti in temp:
         aux = [t for t in temp if t!=ti]
         if not any(ti <= u for u in aux):
             S.append(list(ti))
-    aux=np.array([np.mean(posg[list(p),:],axis=0) for p in S])#km3: holds the centers of the intersection sets of the 2 scanner grids in cartesian coordinates   
-    posg = np.vstack((aux,posg[nonS]))#km3: the aux plus the intersection points that they dont have any neighbors 
+    aux=np.array([np.mean(posg[list(p),:],axis=0) for p in S])
+    #km3: holds the centers of the intersection sets of the 2 scanner grids in cartesian coordinates  
+    """answer la3: yes"""
+    posg = np.vstack((aux,posg[nonS]))
+    #km3: the aux plus the intersection points that they dont have any neighbors 
+    """answer la3: yes """
     tree_g = KDTree(posg)
-    # Diastances and labels of neighbours to intersection points
+    # Distances and labels of neighbours to intersection points
     d0,n0 = tree_g.query(tree_0.data, return_distance = True)
     d1,n1 = tree_g.query(tree_1.data, return_distance = True) 
-    dg,ng = tree_g.query(tree_g.data, k = 3, return_distance = True) #km4: returns the 3 nearest neighbors for each grid point 
+    dg,ng = tree_g.query(tree_g.data, k = 3, return_distance = True) 
+    #km4: returns the 3 nearest neighbors for each grid point 
+    """answer la4: yes"""
     # Correct dimensions!
     d0 = np.squeeze(d0)
     d1 = np.squeeze(d1)
@@ -229,9 +237,17 @@ def grid_over2(mg0, mg1, d):
     ng = np.squeeze(ng)
     
     # Weights' bandwidth estimation 
-    rg = dg[:,1]/2#km4: I can not understand the weighting part especially these 3 lines
+    
+    rg = dg[:,1]/2
     n0_bigger = np.unique(n0[(np.max(np.c_[rg[n0],d0],axis=1)-d0 == 0).nonzero()[0]]) 
     n1_bigger = np.unique(n0[(np.max(np.c_[rg[n0],d0],axis=1)-d0 == 0).nonzero()[0]]) 
+    #km4: I can not understand the weighting part especially these 3 lines
+    """answer la4: It doesn't really matter for our purpose to understand this one, but 
+    it is just comparing an "average" neighborhood size (that doesn't touch the second neighbour via rg)
+    with the distance to closest point to each scan (n0 and n1), finding intersection points with scans
+    information, but as a said before, the weights here were used to reconstruct a winf field bases just
+    on the intersection points, which has poor resolution"""
+    
     #repeated values
 
 #    n0_r = (np.diff(np.sort(n0_bigger))==0).nonzero()[0]  
@@ -265,8 +281,12 @@ def grid_over2(mg0, mg1, d):
 #    w0 = (rg[n0]**2-d0**2)/(d0**2+rg[n0]**2)
 #    w1 = (rg[n1]**2-d1**2)/(d1**2+rg[n1]**2)
     # Delaunay triangulation of intersection points
-    tri = Triangulation(posg[:,0], posg[:,1])  #km4: And finally you are doing the triangulation of the intercection set centers 
-    return (tree_g, tri, w0, n0, i_o_0, w1, n1, i_o_1) #km4: the only thing that is actually used is the last triangulation object tri 
+    tri = Triangulation(posg[:,0], posg[:,1])  
+    #km4: And finally you are doing the triangulation of the intercection set centers 
+    """answer la4: yes"""
+    return (tree_g, tri, w0, n0, i_o_0, w1, n1, i_o_1) 
+    #km4: the only thing that is actually used is the last triangulation object tri 
+    """answer la4: yes"""
 
 # In[Wind field reconstruction]
 
