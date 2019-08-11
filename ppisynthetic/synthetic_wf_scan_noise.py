@@ -198,9 +198,9 @@ def interpolate(values, vtx, wts, fill_value=np.nan):
 
 def interp_weights2(uv, tri, d = 2):
     print('triangulation...')
-    simplex = tri.find_simplex(uv)
-    vertices = np.take(tri.simplices, simplex, axis=0)
-    temp = np.take(tri.transform, simplex, axis=0)
+    simplex = tri.find_simplex(uv)#km5: returns the simplex in which each scanner grid point belongs 
+    vertices = np.take(tri.simplices, simplex, axis=0)#km5: returns the vertices of each simplex  
+    temp = np.take(tri.transform, simplex, axis=0)#km5: what exactly is it stored in temp ?
     delta = uv - temp[:, d]
     bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
     return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
@@ -208,26 +208,26 @@ def interp_weights2(uv, tri, d = 2):
 ## Comment for Konstantinos: This is the one I ended up using, the weighting function from early weights is the one from Alexander's paper
 ####################################################################################################################################
 def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center, n=21, m=51):
-    gamma = (2*np.pi-dir_mean) 
-    r_unique = np.unique(r)
-    phi_unique = np.unique(phi)
-    delta_r = np.min(np.diff(r_unique))
-    delta_phi = np.min(np.diff(phi_unique))
+    gamma = (2*np.pi-dir_mean)#km5: why this rotation ?
+    r_unique = np.unique(r)#km5:remove the repeating radial coorddinates (local cs)
+    phi_unique = np.unique(phi)#km5:remove the repeating azimuthal coorddinates (local cs)
+    delta_r = np.min(np.diff(r_unique))#km5:find radial spacing
+    delta_phi = np.min(np.diff(phi_unique))#km5:find azimuthal spacing
     r_refine = np.linspace(r_unique.min()-delta_r/2,r_unique.max()+
-                           delta_r/2,len(r_unique)*(n-1)+1)      
+                           delta_r/2,len(r_unique)*(n-1)+1)#km5:create refine discretization in the radial direction      
     phi_refine = np.linspace(phi_unique.min()-delta_phi/2, phi_unique.max()+
-                             delta_phi/2, len(phi_unique)*(m-1)+1)
-    r_t_refine, phi_t_refine = np.meshgrid(r_refine,phi_refine)    
+                             delta_phi/2, len(phi_unique)*(m-1)+1)#km5:create refine discretization in the azimuthal direction
+    r_t_refine, phi_t_refine = np.meshgrid(r_refine,phi_refine)#km5: generte the refine mesh    
     
     #LOS angles        
-    s_ref = np.sin(phi_t_refine-gamma)
+    s_ref = np.sin(phi_t_refine-gamma)#km5: what does (phi_t_refine-gamma) represent ?
     c_ref = np.cos(phi_t_refine-gamma)    
-    r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)
-    x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)
+    r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)#km5: tranlation to the global polar cs
+    x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)#km5:from polar to cartesian
 ###
     # Rotation and translation    
     
-    x_trans = -(center)*np.sin(gamma)
+    x_trans = -(center)*np.sin(gamma)#km5: find the translated center of the scanners 
     y_trans = (center)*(1-np.cos(gamma))
     S11 = np.cos(gamma)
     S12 = np.sin(gamma)
@@ -247,7 +247,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center, n=21, m=51):
     erf = sp.special.erf((r_F+.5*delta_r)/rp)-sp.special.erf((r_F-.5*delta_r)/rp)
     w = (1/2/delta_r)*erf   
     shapes = np.array([phi_t_refine.shape[0], phi_t_refine.shape[1], n, m])        
-    return (vtx, wts, w, c_ref, s_ref, shapes)
+    return (vtx, wts, w, c_ref, s_ref, shapes)#km5: returns the vertices the weights the beam weightfunction w a cosine and a sine (which I cant understand what do they represent) and info for the scanner shape (polar coordinates number of beams etc)
 ####################################################################################################################################
 ## Comment for Konstantinos: This early weights was used for a different tasks and it is not realistic
 ####################################################################################################################################
@@ -353,15 +353,30 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     #km4: You do a triangulation of the intersection set centers of the two scanners and you use the distance of the closest vertex to define a spacing through a formula.
     #km4: Then you generate a strctured grid based on this spacing
     #km4: whats the purpose ?
+    """answer la4: As we discussed earlier, this new grid is generated to place the reconstructed wind field,
+                   The scans sample from a fine cartesian squared mesh, 
+                   to a coarser polar mesh (coarser in tue outer regin of the scan, very fine near the origin of each beam)
+                   then it is interpolated back to a cartesian suqared mesh with a different refinement, 
+                   this time depending on the smallest element size of the scan polar mesh. The V_los of each scan
+                   need to be interpolated to a squared cart. mesh to have V_los and azimuth angles from both scans at more common points
+                   than just the intersection points (with this we average less an retain more information)"""
     _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
-    """ Comment: this is a finction in windfieldrec, that define the tringulation of the intersection points
+    """ Comment: this is a function in windfieldrec, that define the tringulation of the intersection points
     of beams coming form the two scans """
-    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))#km4: find the shortest distance from (0,0)? in cartesian coordinates
-    d_grid = r_min*2*np.pi/180#km4: splits the perimeter of the smalest circle in steps of 2 degrees ? d_grid holds this spacing? 
-    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))#km4: some kind of formula that calculates the number of points in each direction. why this formula ?
+    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
+    #km4: find the shortest distance from (0,0)? in cartesian coordinates
+    """answer la4: yes, the closest to the lidars"""
+    d_grid = r_min*2*np.pi/180
+    #km4: splits the perimeter of the smalest circle in steps of 2 degrees ? d_grid holds this spacing? 
+    """answer la4: yes, 2 deg. is the azimuth step of the lidars"""
+    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))
+    #km4: some kind of formula that calculates the number of points in each direction. why this formula ?
+    """answer la4: It is a formula to estimate the the number of grid points with base 2 (the base can be any number though)"""
     x_new = np.linspace(x.min(),x.max(),n_next)
     y_new = np.linspace(y.min(),y.max(),n_next)
-    grid_new = np.meshgrid(x_new,y_new)#km4: a structired grid with uniform spacing in both directions in cartesian coordinates 
+    grid_new = np.meshgrid(x_new,y_new)
+    #km4: a structired grid with uniform spacing in both directions in cartesian coordinates 
+    """answer la4: yes"""
     
     return (L_x, L_y, grid, x, y, tri, grid_new,d)
 
