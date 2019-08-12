@@ -11,6 +11,7 @@ and then you can clone the necessary directories from github.
 """
 import numpy as np
 import scipy as sp
+import math 
 import matplotlib.pyplot as plt
 import os
 import tkinter as tkint
@@ -19,7 +20,7 @@ import tkinter.filedialog
 from os import listdir
 from os.path import isfile, join
 #km:importing functions from folders
-"""answer la: yes""" 
+#answer la: yes""" 
 import ppiscanprocess.windfieldrec as wr
 import ppisynthetic.synthetic_wf_scan_noise as sy
 import ppiscanprocess.spectra_construction as sc
@@ -53,7 +54,8 @@ N_x = 2048
 N_y = 2048
 
 # Mean wind speed and Direction
-Dir = np.linspace(90,270,7)*np.pi/180
+#Dir = np.linspace(90,270,7)*np.pi/180
+Dir = [90*math.pi/180]
 #km: a vector of 7 directions from 90 to 270 deg in rads
 """answer la: yes""" 
 
@@ -92,7 +94,7 @@ L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y)
 #km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
 """answer la4: yes. grid_new is used as the recangular grid for wind field reconstruction from the values of V_LOS of each scan interpolated
 to this grid, if you see below (line 153), from grid_new phi_tri_1_s is calculated as de local (local to each Windscanner) azimuth angle used for reconstruction""" 
-_,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
+#km5:commented this line _,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
 #km4: returns the trianguulation of the intersection set centers between the 2 scanners in cartesian coordinates
 #km4: If I am not wrong, this procedure is also done in the sy.geom_syn_field function 
 """answer la4: yes, indeed it is not used afterwards,  (you can erase this line I think)""" 
@@ -109,7 +111,7 @@ r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
               to be used in wind field reconstruction""" 
 
 # Mann-model parameters
-ae = [0.025, 0.05, 0.075]
+ae = [0.025, 0.05, 0.075] #km5: create a variety of cases with a bunch of mann parameters
 L = [62,62.5,125,250,500,750,1000]
 G = [0,1,2,2.5,3.5]
 seed = np.arange(1,10)
@@ -118,9 +120,9 @@ sym = []
 no_sym = []
 geom_param0 = []
 
-for dir_mean in Dir:
+for dir_mean in Dir:#km5: for each direction. Do you generate different realizations by rotatiing the scanners ?  
   
-    vtx0, wts0, w0, c_ref0, s_ref0, shapes = sy.early_weights_pulsed(r_0_g,np.pi-phi_0_g, dl, dir_mean , tri, -d/2, y[0]/2)
+    vtx0, wts0, w0, c_ref0, s_ref0, shapes = sy.early_weights_pulsed(r_0_g,np.pi-phi_0_g, dl, dir_mean , tri, -d/2, y[0]/2)#km5:pass the local polar coordinates of the scanner0 
     vtx1, wts1, w1, c_ref1, s_ref1, shapes = sy.early_weights_pulsed(r_1_g,np.pi-phi_1_g, dl, dir_mean , tri, d/2, y[0]/2)
     #store data
     geom_param0.append((vtx0, wts0, w0, c_ref0, s_ref0, shapes))

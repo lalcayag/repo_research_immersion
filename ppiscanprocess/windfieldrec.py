@@ -161,7 +161,7 @@ def grid_over2(mg0, mg1, d):
     not the most efficient, feel free to improve it""" 
     dp = min(np.diff(np.unique(mg0[1].flatten())))/2
     #km: calculate the grid spacing step in the azimuth direction   
-        """answer la: This was the first function I wrote for the while set I think,
+    """answer la: This was the first function I wrote for the while set I think,
     not the most efficient, feel free to improve it""" 
     # Translation of grids
     r0, p0 = translationpolargrid(mg0,-d/2)

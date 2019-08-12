@@ -198,9 +198,9 @@ def interpolate(values, vtx, wts, fill_value=np.nan):
 
 def interp_weights2(uv, tri, d = 2):
     print('triangulation...')
-    simplex = tri.find_simplex(uv)
-    vertices = np.take(tri.simplices, simplex, axis=0)
-    temp = np.take(tri.transform, simplex, axis=0)
+    simplex = tri.find_simplex(uv)#km5: returns the simplex in which each scanner grid point belongs 
+    vertices = np.take(tri.simplices, simplex, axis=0)#km5: returns the vertices of each simplex  
+    temp = np.take(tri.transform, simplex, axis=0)#km5: what exactly is it stored in temp ?
     delta = uv - temp[:, d]
     bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
     return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
@@ -208,26 +208,26 @@ def interp_weights2(uv, tri, d = 2):
 ## Comment for Konstantinos: This is the one I ended up using, the weighting function from early weights is the one from Alexander's paper
 ####################################################################################################################################
 def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center, n=21, m=51):
-    gamma = (2*np.pi-dir_mean) 
-    r_unique = np.unique(r)
-    phi_unique = np.unique(phi)
-    delta_r = np.min(np.diff(r_unique))
-    delta_phi = np.min(np.diff(phi_unique))
+    gamma = (2*np.pi-dir_mean)#km5: why this rotation ?
+    r_unique = np.unique(r)#km5:remove the repeating radial coorddinates (local cs)
+    phi_unique = np.unique(phi)#km5:remove the repeating azimuthal coorddinates (local cs)
+    delta_r = np.min(np.diff(r_unique))#km5:find radial spacing
+    delta_phi = np.min(np.diff(phi_unique))#km5:find azimuthal spacing
     r_refine = np.linspace(r_unique.min()-delta_r/2,r_unique.max()+
-                           delta_r/2,len(r_unique)*(n-1)+1)      
+                           delta_r/2,len(r_unique)*(n-1)+1)#km5:create refine discretization in the radial direction      
     phi_refine = np.linspace(phi_unique.min()-delta_phi/2, phi_unique.max()+
-                             delta_phi/2, len(phi_unique)*(m-1)+1)
-    r_t_refine, phi_t_refine = np.meshgrid(r_refine,phi_refine)    
+                             delta_phi/2, len(phi_unique)*(m-1)+1)#km5:create refine discretization in the azimuthal direction
+    r_t_refine, phi_t_refine = np.meshgrid(r_refine,phi_refine)#km5: generte the refine mesh    
     
     #LOS angles        
-    s_ref = np.sin(phi_t_refine-gamma)
+    s_ref = np.sin(phi_t_refine-gamma)#km5: what does (phi_t_refine-gamma) represent ?
     c_ref = np.cos(phi_t_refine-gamma)    
-    r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)
-    x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)
+    r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)#km5: tranlation to the global polar cs
+    x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)#km5:from polar to cartesian
 ###
     # Rotation and translation    
     
-    x_trans = -(center)*np.sin(gamma)
+    x_trans = -(center)*np.sin(gamma)#km5: find the translated center of the scanners 
     y_trans = (center)*(1-np.cos(gamma))
     S11 = np.cos(gamma)
     S12 = np.sin(gamma)
@@ -247,7 +247,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center, n=21, m=51):
     erf = sp.special.erf((r_F+.5*delta_r)/rp)-sp.special.erf((r_F-.5*delta_r)/rp)
     w = (1/2/delta_r)*erf   
     shapes = np.array([phi_t_refine.shape[0], phi_t_refine.shape[1], n, m])        
-    return (vtx, wts, w, c_ref, s_ref, shapes)
+    return (vtx, wts, w, c_ref, s_ref, shapes)#km5: returns the vertices the weights the beam weightfunction w a cosine and a sine (which I cant understand what do they represent) and info for the scanner shape (polar coordinates number of beams etc)
 ####################################################################################################################################
 ## Comment for Konstantinos: This early weights was used for a different tasks and it is not realistic
 ####################################################################################################################################
