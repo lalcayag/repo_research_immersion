@@ -109,7 +109,9 @@ r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
 r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
 """answer la4: So this wis just step to recover the original azimuth angle for each scan (local coordinates for each scan)
               this time in the corresponding points of the reconstructed wind field in cartesian coordinates,
-              to be used in wind field reconstruction""" #km6: but again the results of this part (r_tri_0_s,r_tri_1_s etc) are never used in the code.
+              to be used in wind field reconstruction""" 
+#km6: but again the results of this part (r_tri_0_s,r_tri_1_s etc) are never used in the code.
+"""answer la6: phi_tri_0_s and phi_tri_1_s is used for reconstruction""" 
 
 # Mann-model parameters
 ae = np.array([0.025])#km5: create a variety of cases with a bunch of mann parameters. I will only run one case at least as a starting point. Do you recommend any parameters?
@@ -151,18 +153,24 @@ for dir_mean in Dir:#km5: for each direction. Do you generate different realizat
             U_in = u_mean + u#km5:adding the mean velocity component x to the fluctuations
             V_in = 0 + v
             #Numerical lidar sampling
-            vlos0 = sy.num_pulsed_lidar(U_in,V_in,vtx0,wts0,w0,c_ref0, s_ref0, shapes)#km6: takes as an input the vertices and the weights and returns the vlos in polar coordinates 
+            vlos0 = sy.num_pulsed_lidar(U_in,V_in,vtx0,wts0,w0,c_ref0, s_ref0, shapes)
+            #km6: takes as an input the vertices and the weights and returns the vlos in polar coordinates 
+            """answer la6: yes""" 
             vlos1 = sy.num_pulsed_lidar(U_in,V_in,vtx1,wts1,w1,c_ref1, s_ref1, shapes)
        
             #Interpolation to cartesian grid
             vlos1_int_sq = sp.interpolate.griddata(np.c_[(r_1_t*np.cos(phi_1_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten()],vlos1.flatten(), (grid_new[0].flatten(), grid_new[1].flatten()), method='cubic')
             vlos0_int_sq = sp.interpolate.griddata(np.c_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_0_t*np.sin(phi_0_t)).flatten()],vlos0.flatten(), (grid_new[0].flatten(), grid_new[1].flatten()), method='cubic')
             
-            vlos1_int_sq = np.reshape(vlos1_int_sq,grid_new[0].shape)#km6  reshapes the vector matrix to square (if the domain changes should we change it or not ??)
+            vlos1_int_sq = np.reshape(vlos1_int_sq,grid_new[0].shape)
+            #km6  reshapes the vector matrix to square (if the domain changes should we change it or not ??)
+            """answer la6: No, it is reshaped because comes as a 1d array"""
             vlos0_int_sq = np.reshape(vlos0_int_sq,grid_new[0].shape)
             
             #Wind field reconstruction (overlaping are of the two scans)
-            U,V = sy.dir_rec_rapid(vlos1_int_sq.flatten(),vlos0_int_sq.flatten(), phi_tri_1_s.flatten(),phi_tri_0_s.flatten(),grid_new[0].shape)#km6: why u has small values while v has values close to umean=15?
+            U,V = sy.dir_rec_rapid(vlos1_int_sq.flatten(),vlos0_int_sq.flatten(), phi_tri_1_s.flatten(),phi_tri_0_s.flatten(),grid_new[0].shape)
+            #km6: why u has small values while v has values close to umean=15?
+            """answer la6: If the direction of the wind is in the axis west-east, then goes along the y local coordinate, or V"""
                 
             #Storing
             
