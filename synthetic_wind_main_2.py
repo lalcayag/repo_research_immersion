@@ -22,12 +22,12 @@ from os.path import isfile, join
 #km:importing functions from folders
 #answer la: yes""" 
 import ppiscanprocess.windfieldrec as wr
-import ppisynthetic.synthetic_wf_scan_noise as sy
+import ppisynthetic.synthetic_wf_scan_noise_2 as sy
 import ppiscanprocess.spectra_construction as sc
 
-import matplotlib
-matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams['text.latex.unicode'] = True
+#import matplotlib
+#matplotlib.rcParams['text.usetex'] = True
+#matplotlib.rcParams['text.latex.unicode'] = True
 
 import pickle
 
@@ -55,7 +55,7 @@ N_y = 2048
 
 # Mean wind speed and Direction
 #Dir = np.linspace(90,270,7)*np.pi/180
-Dir = [90*math.pi/180]
+Dir = [0*math.pi/180]
 #km: a vector of 7 directions from 90 to 270 deg in rads
 """answer la: yes""" 
 
@@ -123,8 +123,8 @@ geom_param0 = []
 
 for dir_mean in Dir:#km5: for each direction. Do you generate different realizations by rotatiing the scanners ?  
   
-    vtx0, wts0, w0, c_ref0, s_ref0, shapes,uv0 = sy.early_weights_pulsed(r_0_g,np.pi-phi_0_g, dl, dir_mean , tri, -d/2, y[0]/2,orig0,1,L_x,L_y)#km5: pass the local polar coordinates of the scanner0 
-    vtx1, wts1, w1, c_ref1, s_ref1, shapes,uv1 = sy.early_weights_pulsed(r_1_g,np.pi-phi_1_g, dl, dir_mean , tri, d/2, y[0]/2,orig1,-1,L_x,L_y)
+    vtx0, wts0, w0, c_ref0, s_ref0, shapes,uv0_t,vu_beam_0,uv0 = sy.early_weights_pulsed(r_0_g,np.pi-phi_0_g, dl, dir_mean , tri, -d/2, y[0]/2,orig0,0,L_x,L_y)#km5: pass the local polar coordinates of the scanner0 
+    vtx1, wts1, w1, c_ref1, s_ref1, shapes,uv1_t,vu_beam_1,uv1 = sy.early_weights_pulsed(r_1_g,np.pi-phi_1_g, dl, dir_mean , tri, d/2, y[0]/2,orig1,1,L_x,L_y)
     #store data
     geom_param0.append((vtx0, wts0, w0, c_ref0, s_ref0, shapes))
     geom_param0.append((vtx1, wts1, w1, c_ref1, s_ref1, shapes))
@@ -188,8 +188,8 @@ even = [0,2,4,6,8,10,12]
 #    with open('geom_param1'+str(int(direction*180/np.pi))+'.pkl', 'wb') as geom:
 #     pickle.dump(geom_param0[i],geom) 
     
-with open('sim.pkl', 'wb') as sim:
-     pickle.dump((no_sym,sym),sim)
+#with open('sim.pkl', 'wb') as sim:
+ #    pickle.dump((no_sym,sym),sim)
 
 # In[Auto and cross-correlation]
 ####################################################################################################################################
