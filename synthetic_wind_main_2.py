@@ -90,6 +90,7 @@ r_0_g, phi_0_g, r_0_t, phi_0_t = sy.geom_polar_grid(rmin0,rmax0,nr0,phimin0,phim
 r_1_g, phi_1_g, r_1_t, phi_1_t = sy.geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1, d)
 
 L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y) 
+print("L_x=",L_x,"L_y=",L_y)
 #km4: Return the size of the in general rectangular (but now square) domain. A structured cartesian grid with N_x x N_y points. The coordinates of the grid points x y.
 #km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
 """answer la4: yes. grid_new is used as the recangular grid for wind field reconstruction from the values of V_LOS of each scan interpolated
