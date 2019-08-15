@@ -204,7 +204,7 @@ even = [0,2,4,6,8,10,12]
 ####################################################################################################################################
 ## Comment for Konstantinos: Autocorrelation, very slow, but works with any geometry
 ####################################################################################################################################    
-
+"""answer la7: try this first""" 
 onlyfiles = [f for f in listdir(file_in_path) if isfile(join(file_in_path, f))]  
 x = grid_new[0][0,:]
 y = grid_new[1][:,0]  
@@ -256,7 +256,7 @@ with open('simr.pkl', 'wb') as sim:
 ####################################################################################################################################
 ## Comment for Konstantinos: Spectra from autocorrelation, if you have it
 ####################################################################################################################################    
-
+"""answer la6: and this""" 
 x_max = np.max(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])
 x_min = np.min(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])
 
@@ -421,13 +421,19 @@ for dir_mean in Dir:
 
             #km5: k_u_o,k_v_o,S_u_o,S_v_o,S_uv_o = sc.spatial_spec_sq(x0,y0,np.flipud(np.reshape(u,(N_x,N_y)).T),np.flipud(np.reshape(v,(N_x,N_y)).T),transform = False, ring=False)
             k_u_o,k_v_o,S_u_o,S_v_o,S_uv_o = sc.spatial_spec_sq(x_o,y_o,np.flipud(np.reshape(u,(N_x,N_y)).T),np.flipud(np.reshape(v,(N_x,N_y)).T),transform = False, ring=False)
-            
-            Suo_ave=sc.spectra_average(S_u_o,(k_u_o, k_v_o),bins=20).S
-            Svo_ave=sc.spectra_average(S_v_o,(k_u_o, k_v_o),bins=20).S
-            Sus_ave=sc.spectra_average(S_u_s,(k_u_s, k_v_s),bins=20).S
-            Svs_ave=sc.spectra_average(S_v_s,(k_u_s, k_v_s),bins=20).S            
+ 
+"""answer la6: There are some things I havent modified here since the last time I used it, but check the main function,
+ that can be messy and compare this results to the autocorrelation ones"""            
+#            Suo_ave=sc.spectra_average(S_u_o,(k_u_o, k_v_o),bins=20).S
+#            Svo_ave=sc.spectra_average(S_v_o,(k_u_o, k_v_o),bins=20).S
+#            Sus_ave=sc.spectra_average(S_u_s,(k_u_s, k_v_s),bins=20).S
+#            Svs_ave=sc.spectra_average(S_v_s,(k_u_s, k_v_s),bins=20).S     
+"""answer la6: The average that you see in the spectra here is to calculate the spectra of horizontal fluctuations S_h,
+were u and v are merge in one number. This assumes that the fluctuations are axisymmetric or isotropic, wghich is not the case ussualy, it is just a model
+from Peltier 1996"""               
             Su_o1D_ave = sp.integrate.simps(.5*(Suo_ave+Svo_ave),k_v_o,axis=0)
             Su_s1D_ave = sp.integrate.simps(.5*(Sus_ave+Svs_ave),k_v_s,axis=0)
+            
             Su_o1D_ave_it = np.exp(sp.interpolate.interp1d(np.log(k_u_o[k_u_o>0]),
                             np.log(Su_o1D_ave[k_u_o>0]))(np.log(k_u_s[k_u_s>np.min(k_u_o[k_u_o>0])])))            
             k_H_s.append(k_u_s[k_u_s>np.min(k_u_o[k_u_o>0])])
