@@ -207,7 +207,7 @@ def interp_weights2(uv, tri, d = 2):
 ####################################################################################################################################
 ## Comment for Konstantinos: This is the one I ended up using, the weighting function from early weights is the one from Alexander's paper
 ####################################################################################################################################
-def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,rotation,L_x,L_y, n=21, m=51):
+def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner_id,L_x,L_y, n=21, m=51):
     gamma = (2*np.pi-dir_mean)#km5: why this rotation ?
     r_unique = np.unique(r)#km5:remove the repeating radial coorddinates (local cs)
     phi_unique = np.unique(phi)#km5:remove the repeating azimuthal coorddinates (local cs)
@@ -224,11 +224,12 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,rotatio
     c_ref = np.cos(phi_t_refine-gamma)    
     r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)#km5: tranlation to the global polar cs
     x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)#km5:from polar to cartesian
-    beam_orig[0]=+d[0]
+    beam_orig[0]=-d[0]
+    
 ###
     # Rotation and translation    
     
-    """km change:    
+    #km change:    
     x_trans = -(center)*np.sin(gamma)#km5: find the translated center of the scanners 
     y_trans = (center)*(1-np.cos(gamma))
     S11 = np.cos(gamma)
@@ -237,14 +238,16 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,rotatio
     R = np.array([[S11,S12,0], [-S12,S11, 0], [0, 0, 1]])    
     Xx = np.array(np.c_[x_t_refine.flatten(), y_t_refine.flatten(),
                                     np.ones(len(y_t_refine.flatten()))]).T
+    #uv=Xx[:2,:].T
     Xx = np.dot(T1,np.dot(R,Xx))
-    uv = Xx[:2,:].T
-    """
+    uv_t = Xx[:2,:].T
+    
 ####################################################################   
+    
     r_refine_unique = np.unique(r_refine)
     phi_refine_unique = np.unique(phi_refine)
     delta_r_refine = np.min(np.diff(r_refine_unique))#km6:find radial spacing of the coarse mesh 
-    delta_phi_refine = np.min(np.diff(phi_refine_unique))#km5:find azimuthal spacing of the coarse mesh 
+    delta_phi_refine = np.abs(np.min(np.diff(phi_refine_unique)))#km5:find azimuthal spacing of the coarse mesh 
     
     r_max=np.max(r_refine)
     r_min=np.min(r_refine)
@@ -259,20 +262,22 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,rotatio
     d_r=delta_r_refine
     d_phi=math.degrees(delta_phi_refine)
     
-    u_mean=15
-    time_step=int(45/len(phi_refine_unique))
-    if rotation==1:#clock wise 
+    u_mean=15#change it to zero to validate aainst the original function 
+    time_step=float(45/len(phi_refine_unique))
+    if scanner_id==0:
+        rotation=1
+        angle_stop=np.degrees(np.max(phi_refine))
+        angle_start=np.degrees(np.min(phi_refine))
+    else:
+        rotation=1
         angle_start=np.degrees(np.min(phi_refine))
         angle_stop=np.degrees(np.max(phi_refine))
-    else:
-        angle_start=np.degrees(np.max(phi_refine))
-        angle_stop=np.degrees(np.min(phi_refine))
     
     print("elements",(r_max-r_min)/d_r*(float(np.max(phi_refine))-float(np.min(phi_refine))/d_phi))
-    uv=beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,float(angle_start),float(angle_stop),d_r,d_phi,time_step,r_max,r_min,rotation)
+    uv=beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,float(angle_start),float(angle_stop),abs(d_r),abs(d_phi),time_step,abs(r_max),abs(r_min),rotation)
     
     
-    
+    vu=1
     vtx, wts = interp_weights2(uv, tri, d = 2)
           
     aux_1 = np.reshape(np.repeat(r_unique,len(r_refine),axis = 0),(len(r_unique),len(r_refine)))
@@ -283,7 +288,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,rotatio
     erf = sp.special.erf((r_F+.5*delta_r)/rp)-sp.special.erf((r_F-.5*delta_r)/rp)
     w = (1/2/delta_r)*erf   
     shapes = np.array([phi_t_refine.shape[0], phi_t_refine.shape[1], n, m])        
-    return (vtx, wts, w, c_ref, s_ref, shapes,uv)#km5: returns the vertices the weights the beam weightfunction w a cosine and a sine (which I cant understand what do they represent) and info for the scanner shape (polar coordinates number of beams etc)
+    return (vtx, wts, w, c_ref, s_ref, shapes,uv_t,vu,uv)#km5: returns the vertices the weights the beam weightfunction w a cosine and a sine (which I cant understand what do they represent) and info for the scanner shape (polar coordinates number of beams etc)
 ####################################################################################################################################
 ## Comment for Konstantinos: This early weights was used for a different tasks and it is not realistic
 ####################################################################################################################################
@@ -579,21 +584,21 @@ def beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,angle_start,angle_stop,d_r,d_p
     for phi in np.arange(angle_start,angle_stop,rotation*d_phi):
         rotations=rotations+1
         beam_orig[0]=beam_orig[0]+u_mean*time_step#translate the origin of the beam based on the velocity 
-        phi=math.radians(phi)#convert angle phi to radians 
-        point_x=[r_min*math.sin(phi)+beam_orig[0]]#calulate initial point
-        point_y=[r_min*math.cos(phi)+beam_orig[1]]
+        phi_1=math.radians(phi)#convert angle phi to radians 
+        point_x=[r_min*(math.cos(phi_1))+beam_orig[0]]#calulate initial point
+        point_y=[r_min*(math.sin(phi_1))+beam_orig[1]]
         #print(rotations)
         #while the next point is inside the domain continue
         #print("condition",(point_x[-1]>x_range[0] and point_x[-1]<x_range[1]) and (point_y[-1]>y_range[0] and point_y[-1]<y_range[1]))
         #while (point_x[-1]>=x_range[0] and point_x[-1]<=x_range[1]) and (point_y[-1]>=y_range[0] and point_y[-1]<=y_range[1]) and (math.sqrt((point_x[-1]-point_x[0])**2+(point_y[-1]-point_y[0])**2)<=r_max) :
         #while (math.sqrt((point_x[-1]-point_x[0])**2+(point_y[-1]-point_y[0])**2)<=(r_max-r_min)) :
-        for r in np.arange(r_min+d_r,r_max+d_r,d_r):
+        for i in range(len(np.arange(r_min+d_r,r_max+d_r,d_r))):
         #while (point_x[-1]>=x_range[0] and point_x[-1]<=x_range[1]) and (point_y[-1]>=y_range[0]):
             #print("flag1")
-            #next_point_x=point_x[-1]+d_r*math.sin(phi)#this is for a while loop
-            #next_point_y=point_y[-1]+d_r*math.cos(phi)#this is for a while loop
-            next_point_x=r*math.sin(phi)
-            next_point_y=r*math.cos(phi)
+            next_point_x=point_x[-1]+d_r*(math.cos(phi_1))#this is for a while loop %use this one solves both !
+            next_point_y=point_y[-1]+d_r*(math.sin(phi_1))#this is for a while loop
+            #next_point_x=r*math.cos(phi)
+            #next_point_y=r*math.sin(phi)
             point_x.append(next_point_x)
             point_y.append(next_point_y)
         #remove last entity because it represents the last point which is just ousite the domain #this is for the while loop     
