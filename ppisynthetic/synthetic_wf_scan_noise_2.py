@@ -262,7 +262,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner
     d_r=delta_r_refine
     d_phi=math.degrees(delta_phi_refine)
     
-    u_mean=15#change it to zero to validate aainst the original function 
+    u_mean=15
     time_step=float(45/len(phi_refine_unique))
     if scanner_id==0:
         rotation=1
@@ -359,8 +359,12 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,d)
     #km2: I think that this should be changed in the new version where we have to triangulate the whole long field
     #km change: we must change the limits of the domain x_max x_min y_max y_min so that they will correspond to the long domain !  
-    x_max = np.max(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
+    u_mean=15#remember to pass it as parameter in the function
+    #x_max = np.max(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])+u_mean*45#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
+    
     x_min = np.min(np.r_[(r_0_t*np.cos(phi_0_t)).flatten(),(r_1_t*np.cos(phi_1_t)).flatten()])
+    x_max=9882.563743135905-abs(x_min)
+    
     #km: why you use only the translated coordinate systems? 
     """ answer la: because when translated both scans are in the same polar coordinate system and represent the size of the whole domain
                    that will be used later in the synthetic wind field generation. This is not our case since the domain might be several times
@@ -375,6 +379,8 @@ def geom_syn_field(rp0, rp1, N_x, N_y):
     #km: length of the synthetic domain in y direction
     """answer la: yes"""
     x = np.linspace(x_min,x_max,N_x)
+    print("x_max=",x_max,"x_min=",x_min)
+    print("x_max_lin=",np.max(x),"x_min_lin=",np.min(x))
     #km:new x discretization over the synthetic region? 
     """answer la: yes, after knowing the limits of the squared domain covered by the scan, the grid is defined in x"""
     y = np.linspace(y_min,y_max,N_y)
