@@ -655,7 +655,8 @@ def beam2(x_t_refine, y_t_refine, phi_refine,u_mean, rot_speed, center, gamma):
     t_total = t_step*len(phi_refine[1:,0])
     #Below it is t_total+t_step to include the last point
     t_array = np.arange(0,t_total+t_step,t_step)
-    disp = np.c_[u_mean[0]*t_array,u_mean[1]*t_array]
+    disp_x = np.array([list(u_mean[0]*t_array),]*phi_refine.shape[1])
+    disp_y = np.array([list(u_mean[1]*t_array),]*phi_refine.shape[1])
     
     # To make it more general (to generalize to different wind directions) each beam should be 
     # first translated to the center of the squared domain, then rotated like it was done before,
@@ -672,7 +673,7 @@ def beam2(x_t_refine, y_t_refine, phi_refine,u_mean, rot_speed, center, gamma):
     Xx = np.array(np.c_[x_t_refine.flatten(), y_t_refine.flatten(),
                                     np.ones(len(y_t_refine.flatten()))]).T  
     Xx = np.dot(T1,np.dot(R,Xx))
-    uv = Xx[:2,:].T + disp
+    uv = Xx[:2,:].T + np.c_[disp_x.flatten(),disp_y.flatten()]
     
     return uv
 
