@@ -224,6 +224,8 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner
     c_ref = np.cos(phi_t_refine-gamma)    
     r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)#km5: tranlation to the global polar cs
     x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)#km5:from polar to cartesian
+    
+    """ !!!!!!!!!!!! try plugging in beam2() from here"""
     beam_orig[0]=-d[0]
     
 ###
@@ -254,8 +256,7 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner
     
     x_min=np.min(x_t_refine)
     x_max=np.max(x_t_refine)
-    
-    
+      
     y_min=np.min(y_t_refine)
     y_max=np.max(y_t_refine)
     
@@ -272,12 +273,16 @@ def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner
         rotation=1
         angle_start=np.degrees(np.min(phi_refine))
         angle_stop=np.degrees(np.max(phi_refine))
+    """comment la8:  What is the difference if scan_id is 0 or not?"""
     
     print("elements",(r_max-r_min)/d_r*(float(np.max(phi_refine))-float(np.min(phi_refine))/d_phi))
     uv=beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,float(angle_start),float(angle_stop),abs(d_r),abs(d_phi),time_step,abs(r_max),abs(r_min),rotation)
     
     
+    
     vu=1
+    
+    """ !!!!!!!!!!!! to here, to get uv"""
     vtx, wts = interp_weights2(uv, tri, d = 2)
           
     aux_1 = np.reshape(np.repeat(r_unique,len(r_refine),axis = 0),(len(r_unique),len(r_refine)))
@@ -590,6 +595,8 @@ def beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,angle_start,angle_stop,d_r,d_p
     for phi in np.arange(angle_start,angle_stop,rotation*d_phi):
         rotations=rotations+1
         beam_orig[0]=beam_orig[0]+u_mean*time_step#translate the origin of the beam based on the velocity 
+        """comment la8:  To make it more general, 
+        beam_orig = beam_orig + u_mean*time_step, with u_mean = [V_x, V_y]"""
         phi_1=math.radians(phi)#convert angle phi to radians 
         point_x=[r_min*(math.cos(phi_1))+beam_orig[0]]#calulate initial point
         point_y=[r_min*(math.sin(phi_1))+beam_orig[1]]
@@ -625,8 +632,57 @@ def beam(x_min,x_max,y_min,y_max,u_mean,beam_orig,angle_start,angle_stop,d_r,d_p
     x=np.delete(x,0)
     y=np.delete(y,0)
     final_points=np.stack((x,y)).T
+    """comment la8: I would say that you can get rid of for loops using linear transformations, see beam2, below"""
     return  final_points
        
+def beam2(x_t_refine, y_t_refine, phi_refine,u_mean, rot_speed, center, gamma):
+    
+    """ Inputs
+        
+        rot_speed    : rotational speed in [rad/s]
+        x_t_refine   : mesh of points in x direction(could be coarser also) [m]
+        y_t_refine   : mesh of points in y direction(could be coarser also) [m]
+        phi_refine   : mesh of points in phi direction(could be coarse also) [rad]
+        
+    It is not important the direction of rotation of beams for this function
+        
+    """
+    u_mean = np.array([u_mean,0])
+    # Here I suppose that the mesh is equally spaced in phi, and it changes is in axis 1,
+    # you can make it more general
+    dphi = np.diff(phi_refine[:,0])
+    t_step = dphi/rot_speed
+    t_total = t_step*len(phi_refine[1:,0])
+    #Below it is t_total+t_step to include the last point
+    t_array = np.arange(0,t_total+t_step,t_step)
+    disp = np.c_[u_mean[0]*t_array,u_mean[1]*t_array]
+    
+    # To make it more general (to generalize to different wind directions) each beam should be 
+    # first translated to the center of the squared domain, then rotated like it was done before,
+    # then and additional translation is done. Since u_mean will always be in the x direction
+    # in the global cord system, we just add a dx
+    
+    x_trans = -(center)*np.sin(gamma)
+    y_trans = (center)*(1-np.cos(gamma))
+    S11 = np.cos(gamma)
+    S12 = np.sin(gamma)
+    T1 = np.array([[1,0,x_trans], [0,1, y_trans], [0, 0, 1]])
+    
+    R = np.array([[S11,S12,0], [-S12,S11, 0], [0, 0, 1]])    
+    Xx = np.array(np.c_[x_t_refine.flatten(), y_t_refine.flatten(),
+                                    np.ones(len(y_t_refine.flatten()))]).T  
+    Xx = np.dot(T1,np.dot(R,Xx))
+    uv = Xx[:2,:].T + disp
+    
+    return uv
+
+    
+    
+    
+    
+    
+    
+    
 
 
 
