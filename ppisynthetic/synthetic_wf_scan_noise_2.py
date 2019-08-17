@@ -354,6 +354,82 @@ def geom_polar_grid(rmin,rmax,nr,phimin,phimax,nphi,d):
     #translate the polar grid
     """answer la: yes"""
     return (r_g, phi_g, r_t, phi_t)
+
+# In[New function, check it out]
+
+def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed):    
+    # Polar grid 2 horizontal scans
+    rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = rp0
+    rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = rp1 
+    d = orig1-orig0     
+    r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)#km2: you translate it again because you pass only the tuple as an input
+    r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,d)
+    #km2: I think that this should be changed in the new version where we have to triangulate the whole long field
+    """ This is new..."""
+    
+    # Here I suppose that the mesh is equally spaced in phi, and it changes in axis 1,
+    # you can make it more general
+    dphi = np.abs(phimin0-phimax0)/(np0-1)
+    t_step = dphi/rot_speed
+    t_total = np.abs(phimin0-phimax0)/rot_speed
+    #Below it is t_total+t_step to include the last point
+    t_array = np.arange(0,t_total+t_step,t_step)
+    
+    disp_x = np.array([list(u_mean*t_array),]*nr0).transpose()
+    
+    print(disp_x)
+    
+    # Total time per scan, this assumes both scans have the same speed
+    x0 = (r_0_t*np.cos(phi_0_t) - disp_x).flatten()
+    x1 = (r_1_t*np.cos(phi_1_t) - disp_x).flatten()
+    y0 = (r_0_t*np.sin(phi_0_t)).flatten()
+    y1 = (r_1_t*np.sin(phi_1_t)).flatten() 
+    
+        ###########################
+    # Just for plottinh, no displacement
+    x00 = (r_0_t*np.cos(phi_0_t)).flatten()
+    x11 = (r_1_t*np.cos(phi_1_t)).flatten()
+    y00 = (r_0_t*np.sin(phi_0_t)).flatten()
+    y11 = (r_1_t*np.sin(phi_1_t)).flatten()
+    plt.figure()
+    plt.scatter(x0, y0)
+    plt.scatter(x1, y1)
+    plt.scatter(x00, y00)
+    plt.scatter(x11, y11)
+    ####################
+
+    
+    x_max = np.max(np.r_[x0,x1])#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
+    x_min = np.min(np.r_[x0,x1])    
+    y_max = np.max(np.r_[y0,y1])
+    y_min = np.min(np.r_[y0,y1]) 
+    
+    L_x = x_max-x_min
+    L_y = y_max-y_min
+
+    x = np.linspace(x_min,x_max,N_x)
+    y = np.linspace(y_min,y_max,N_y)
+
+    grid = np.meshgrid(x,y) 
+
+    tri = Delaunay(np.c_[grid[0].flatten(),grid[1].flatten()], qhull_options = "QJ")
+
+    _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
+
+    r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
+
+    d_grid = r_min*2*np.pi/180
+
+    n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))
+
+    x_new = np.linspace(x.min(),x.max(),n_next)
+    y_new = np.linspace(y.min(),y.max(),n_next)
+    grid_new = np.meshgrid(x_new,y_new)
+    
+    return (L_x, L_y, grid, x, y, tri, grid_new,d)
+
+
+# In[]
     
 def geom_syn_field(rp0, rp1, N_x, N_y):    
     # Polar grid 2 horizontal scans
@@ -645,18 +721,19 @@ def beam2(x_t_refine, y_t_refine, phi_refine,u_mean, rot_speed, center, gamma):
         phi_refine   : mesh of points in phi direction(could be coarse also) [rad]
         
     It is not important the direction of rotation of beams for this function
-        
+    but that the scanning starts from the first row of the array [0,:],
+    and end in the last row [-1,:]
     """
     u_mean = np.array([u_mean,0])
-    # Here I suppose that the mesh is equally spaced in phi, and it changes is in axis 1,
+    # Here I suppose that the mesh is equally spaced in phi, and it changes in axis 1,
     # you can make it more general
     dphi = np.diff(phi_refine[:,0])
     t_step = dphi/rot_speed
     t_total = t_step*len(phi_refine[1:,0])
     #Below it is t_total+t_step to include the last point
     t_array = np.arange(0,t_total+t_step,t_step)
-    disp_x = np.array([list(u_mean[0]*t_array),]*phi_refine.shape[1])
-    disp_y = np.array([list(u_mean[1]*t_array),]*phi_refine.shape[1])
+    disp_x = np.array([list(u_mean[0]*t_array),]*phi_refine.shape[1]).transpose()
+    disp_y = np.array([list(u_mean[1]*t_array),]*phi_refine.shape[1]).transpose()
     
     # To make it more general (to generalize to different wind directions) each beam should be 
     # first translated to the center of the squared domain, then rotated like it was done before,
@@ -673,7 +750,7 @@ def beam2(x_t_refine, y_t_refine, phi_refine,u_mean, rot_speed, center, gamma):
     Xx = np.array(np.c_[x_t_refine.flatten(), y_t_refine.flatten(),
                                     np.ones(len(y_t_refine.flatten()))]).T  
     Xx = np.dot(T1,np.dot(R,Xx))
-    uv = Xx[:2,:].T + np.c_[disp_x.flatten(),disp_y.flatten()]
+    uv = Xx[:2,:].T - np.c_[disp_x.flatten(),disp_y.flatten()]
     
     return uv
 
