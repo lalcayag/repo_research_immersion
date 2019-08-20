@@ -70,11 +70,11 @@ N_y = 2048
 
 # Mean wind speed and Direction
 #Dir = np.linspace(90,270,7)*np.pi/180
-Dir = [0*np.pi/180]
+#Dir = [0*np.pi/180]
 #km: a vector of 7 directions from 90 to 270 deg in rads
 """answer la: yes""" 
 
-u_mean = 15
+#u_mean = 15
  #km: the mean wind speed
 """answer la: yes, we can change this and make an array of wind speeds""" 
 
@@ -105,45 +105,47 @@ r_0_g, phi_0_g, r_0_t, phi_0_t = sy.geom_polar_grid(rmin0,rmax0,nr0,phimin0,phim
 # Polar grids for Scan 1 (local and translated)
 r_1_g, phi_1_g, r_1_t, phi_1_t = sy.geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,-d)
 
-plt.figure()
-plt.scatter((r_0_t*np.cos(phi_0_t)).flatten(),(r_0_t*np.sin(phi_0_t)).flatten())
-plt.scatter((r_1_t*np.cos(phi_1_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten())
+#plt.figure()
+#plt.scatter((r_0_t*np.cos(phi_0_t)).flatten(),(r_0_t*np.sin(phi_0_t)).flatten())
+#plt.scatter((r_1_t*np.cos(phi_1_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten())
 
-L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y) 
+# In[]
 
-print("L_x=",L_x,"L_y=",L_y)
-#km4: Return the size of the in general rectangular (but now square) domain. A structured cartesian grid with N_x x N_y points. The coordinates of the grid points x y.
-#km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
-"""answer la4: yes. grid_new is used as the recangular grid for wind field reconstruction from the values of V_LOS of each scan interpolated
-to this grid, if you see below (line 153), from grid_new phi_tri_1_s is calculated as de local (local to each Windscanner) azimuth angle used for reconstruction""" 
-#km5:commented this line _,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
-#km4: returns the trianguulation of the intersection set centers between the 2 scanners in cartesian coordinates
-#km4: If I am not wrong, this procedure is also done in the sy.geom_syn_field function 
-"""answer la4: yes, indeed it is not used afterwards,  (you can erase this line I think)"""
-#km6: grid is not used only grid_new is used in the rest of the code 
-# Triangulation and weights for each scan
-dl = 75
-
-# From Cartesian coord. to polar in global grid 
-r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
-phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
-r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
-r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
-"""answer la4: So this wis just step to recover the original azimuth angle for each scan (local coordinates for each scan)
-              this time in the corresponding points of the reconstructed wind field in cartesian coordinates,
-              to be used in wind field reconstruction""" 
-#km6: but again the results of this part (r_tri_0_s,r_tri_1_s etc) are never used in the code.
-"""answer la6: phi_tri_0_s and phi_tri_1_s is used for reconstruction""" 
-
-# Mann-model parameters
-ae = np.array([0.025])#km5: create a variety of cases with a bunch of mann parameters. I will only run one case at least as a starting point. Do you recommend any parameters?
-L = np.array([50])
-G = np.array([2.0])
-seed =np.array([10])#km5: what does it represent?
-ae,L,G,seed = np.meshgrid(ae,L,G,-seed)
-sym = []
-no_sym = []
-geom_param0 = []
+#L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y) 
+#
+#print("L_x=",L_x,"L_y=",L_y)
+##km4: Return the size of the in general rectangular (but now square) domain. A structured cartesian grid with N_x x N_y points. The coordinates of the grid points x y.
+##km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
+#"""answer la4: yes. grid_new is used as the recangular grid for wind field reconstruction from the values of V_LOS of each scan interpolated
+#to this grid, if you see below (line 153), from grid_new phi_tri_1_s is calculated as de local (local to each Windscanner) azimuth angle used for reconstruction""" 
+##km5:commented this line _,tri_i,_, _, _, _, _, _ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
+##km4: returns the trianguulation of the intersection set centers between the 2 scanners in cartesian coordinates
+##km4: If I am not wrong, this procedure is also done in the sy.geom_syn_field function 
+#"""answer la4: yes, indeed it is not used afterwards,  (you can erase this line I think)"""
+##km6: grid is not used only grid_new is used in the rest of the code 
+## Triangulation and weights for each scan
+#dl = 75
+#
+## From Cartesian coord. to polar in global grid 
+#r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
+#phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
+#r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
+#r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
+#"""answer la4: So this wis just step to recover the original azimuth angle for each scan (local coordinates for each scan)
+#              this time in the corresponding points of the reconstructed wind field in cartesian coordinates,
+#              to be used in wind field reconstruction""" 
+##km6: but again the results of this part (r_tri_0_s,r_tri_1_s etc) are never used in the code.
+#"""answer la6: phi_tri_0_s and phi_tri_1_s is used for reconstruction""" 
+#
+## Mann-model parameters
+#ae = np.array([0.025])#km5: create a variety of cases with a bunch of mann parameters. I will only run one case at least as a starting point. Do you recommend any parameters?
+#L = np.array([50])
+#G = np.array([2.0])
+#seed =np.array([10])#km5: what does it represent?
+#ae,L,G,seed = np.meshgrid(ae,L,G,-seed)
+#sym = []
+#no_sym = []
+#geom_param0 = []
 
 #############################################################
 # In[]
@@ -178,7 +180,7 @@ def plot_mesh(x,y,x0,y0,title):
 dir_mean = np.array([0, 90, 45, 270, 180])*np.pi/180
 """ to cartesian"""
 dir_mean = np.pi/2-dir_mean
-dir_tit = (np.pi/2-dir_mean)*180/np.pi
+dir_tit = wrap_angle((np.pi/2-dir_mean))*180/np.pi
 u_mean = [0,15,100]
 rot = 2 #2 degrees per second, rotational speed of the scan or scanning speed
 
@@ -194,6 +196,8 @@ L_x4,L_y4,grid4,x4,y4,tri4,_,_,x_0_rta4,y_0_rta4,x_1_rta4,y_1_rta4,center4 = sy.
                                                                                         N_x, N_y, u_mean[1], rot, dir_mean[3], tri_ret = False)
 L_x5,L_y5,grid5,x5,y5,tri5,_,_,x_0_rta5,y_0_rta5,x_1_rta5,y_1_rta5,center5 = sy.geom_syn_field2(rp0, rp1,
                                                                                         N_x, N_y, u_mean[1], rot, dir_mean[2], tri_ret = False)
+L_x6,L_y6,grid6,x6,y6,tri6,_,_,x_0_rta6,y_0_rta6,x_1_rta6,y_1_rta6,center6 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[2], rot, dir_mean[2], tri_ret = False)
 
 plot_mesh(x0[::16],y0[::16],x0, y0, title = '$U _{mean}$ ='+'%.2f' %u_mean[0]+', Direction = '+'%.2f' %(dir_tit[0]))
 plt.scatter(x_0_rta0.flatten(),y_0_rta0.flatten())
@@ -218,27 +222,32 @@ plt.scatter(x_1_rta4.flatten(),y_1_rta4.flatten())
 plot_mesh(x5[::16],y5[::16],x5, y5, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[2]))
 plt.scatter(x_0_rta5.flatten(),y_0_rta5.flatten())
 plt.scatter(x_1_rta5.flatten(),y_1_rta5.flatten())
+
+plot_mesh(x6[::16],y6[::16],x6, y6, title = '$U _{mean}$ ='+'%.2f' %u_mean[2]+', Direction = '+'%.2f' %(dir_tit[2]))
+plt.scatter(x_0_rta6.flatten(),y_0_rta6.flatten())
+plt.scatter(x_1_rta6.flatten(),y_1_rta6.flatten())
 ######################################################################
-# In[]
+# In[YOur results come from here!!!!!!!!!!!!!!!!!!!!!]
 ######################################################################
 """ The above was just to try diffrent speeds and the efect on the sampling positions,
 here you can find the real testing, woth the final reconstruction
 """ 
-i = 2
-j = 1
+i = 0
+j = 2
 tri_calc = False
+# You can change this list
 dir_mean = np.array([0, 90, 45, 270, 180])*np.pi/180
 """ to cartesian"""
 dir_mean = np.pi/2-dir_mean
 dir_tit = (np.pi/2-dir_mean)*180/np.pi
-u_mean = [0,40,100]
+u_mean = [0,20,100]
 rot = 2 #2 degrees per second, rotational speed of the scan or scanning speed
 L_x, L_y, grid, x, y, tri, grid_new, d, x_0_rta, y_0_rta, x_1_rta, y_1_rta, center = sy.geom_syn_field2(rp0, rp1,         
                                                                                                         N_x, N_y, u_mean[j], rot, dir_mean[i],tri_ret = tri_calc)
 
-plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[j]+', Direction = '+'%.2f' %(dir_tit[i]))
-plt.scatter(x_0_rta.flatten(),y_0_rta.flatten())
-plt.scatter(x_1_rta.flatten(),y_1_rta.flatten())
+#plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[j]+', Direction = '+'%.2f' %(dir_tit[i]))
+#plt.scatter(x_0_rta.flatten(),y_0_rta.flatten())
+#plt.scatter(x_1_rta.flatten(),y_1_rta.flatten())
 
 # The dir where the simulations will be saved or read
 root = tkint.Tk()
@@ -246,20 +255,23 @@ file_in_path = tkint.filedialog.askdirectory(parent=root,title='Choose a sim. In
 root.destroy()
 ################################################################################
 # Wind Field generation, you can insert a loop
-#u, v = sy.wind_sim(.025, 300, 3.5, -1, 2048, 2048, L_x, L_y, file_in_path, pre = 'res_im')
-#
-#U = np.reshape(u,grid[0].shape).T
-#V = np.reshape(v,grid[0].shape).T
+u, v = sy.wind_sim(.025, 300, 3.5, -1, 2048, 2048, L_x, L_y, file_in_path, pre = 'res_im')
+
+u = np.reshape(u,grid[0].shape).T
+v = np.reshape(v,grid[0].shape).T
 ################################################################################
 #Or you can read it from a file
-u = np.reshape(np.fromfile(file_in_path+'/res_imu3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
-v = np.reshape(np.fromfile(file_in_path+'/res_imv3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
+#u = np.reshape(np.fromfile(file_in_path+'/res_imu3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
+#v = np.reshape(np.fromfile(file_in_path+'/res_imv3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
 
-U_in = u_mean[1]*np.ones(u.shape) + u
+#Be careful with the mean wind speed you are using with no advection
+
+U_in = u_mean[j]*np.ones(u.shape) + u
 V_in = np.zeros(u.shape)+v
+
 """This field is just to try :)"""
-U_in = np.array([list(u_mean[1]*np.arange(0,u.shape[0])/u.shape[0]),]*u.shape[1]).T# + u
-V_in = np.zeros(u.shape)#v
+#U_in = np.array([list(u_mean[1]*np.arange(0,u.shape[0])/u.shape[0]),]*u.shape[1]).T# + u
+#V_in = np.zeros(u.shape)#v
 
 vtx0, wts0, w0, c_ref0, s_ref0, shapes,uv0,r_refine0,phi_refine0 = sy.early_weights_pulsed2(r_0_g,phi_0_g, tri,
                                                           dl, dir_mean[i] , d/2,
@@ -269,6 +281,7 @@ vtx1, wts1, w1, c_ref1, s_ref1, shapes,uv1,r_refine1,phi_refine1 = sy.early_weig
                                                           dl, dir_mean[i] , -d/2,
                                                           center,rot*np.pi/180, u_mean[j], tri_calc = tri_calc)
 
+# Maybe you dn't want to plot this, it was just for cheking the overlapping are for different mean wind speeds
 plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[0]+', $Direction$ = '+'%.2f' %dir_tit[i])
 plt.scatter(uv0[::32,0],uv0[::32,1],c = wrap_angle(np.arctan2(s_ref0.flatten()[::32],c_ref0.flatten()[::32]))*180/np.pi,cmap='jet')
 plt.colorbar()
@@ -345,12 +358,28 @@ Ur,Vr = sy.dir_rec_rapid(vlos0_int_sq.flatten(),vlos1_int_sq.flatten(),
                          wrap_angle(phi0sq).flatten(),wrap_angle(phi1sq).flatten(),
                          grid_new[0].shape)
 
+# If you want to plot to check, is up to you
 plt.figure()
 plt.contourf(grid_new[0], grid_new[1], Ur, cmap='jet')
 plt.colorbar()
 plt.figure()
-plt.contourf(grid_new[0], grid_new[1], Vr,np.linspace(-18,-11,10), cmap='jet')
+plt.contourf(grid_new[0], grid_new[1], Vr, cmap='jet')
 plt.colorbar()
+
+#########################
+# If you want to check the autocorrelatiobn of the original wind field
+#########################
+U_o = np.reshape(sp.interpolate.RectBivariateSpline(x, y, U_in.T)(grid_new[0].flatten(),
+                                         grid_new[1].flatten(),grid=False),grid_new[0].shape)
+V_o = np.reshape(sp.interpolate.RectBivariateSpline(x, y, V_in.T)(grid_new[0].flatten(),
+                                         grid_new[1].flatten(),grid=False),grid_new[0].shape)
+#########################
+#########################
+#
+#overlap = np.isnan(vlos0_int_sq) | np.isnan(vlos1_int_sq) 
+#
+#U_o[overlap] = np.nan
+#V_o[overlap] = np.nan
 
 # Some plots that could be useful
 #plt.figure()
@@ -364,7 +393,7 @@ plt.colorbar()
 #plt.contourf(grid_new[0], grid_new[1], vlos0_int_sq, cmap='jet')
 #plt.contourf(grid_new[0], grid_new[1], vlos1_int_sq, cmap='jet')
 #plt.colorbar()
-
+#
 #plt.figure()
 #plt.contourf(grid_new[0], grid_new[1], wrap_angle(phi0sq)*180/np.pi, 20, cmap='jet')
 #plt.colorbar()
@@ -372,15 +401,31 @@ plt.colorbar()
 #plt.colorbar()
 
 #plt.figure()
-#plt.contourf(grid[0], grid[1], U_in, cmap='jet')
+#plt.contourf(grid_new[0], grid_new[1], U_o, cmap='jet')
 #plt.colorbar()
-#
 #plt.figure()
-#plt.contourf(grid[0], grid[1], V_in, cmap='jet')
+#plt.contourf(grid_new[0], grid_new[1], V_o, cmap='jet')
 #plt.colorbar()
-####################################
-""" end of testing"""
+
+
+#########################
+# Autocorreltion and length scales
+U_mean = np.nanmean(Ur.flatten())
+V_mean = np.nanmean(Vr.flatten())
+gamma = np.arctan2(V_mean,U_mean)
+tau,eta,r_u,r_v,r_uv,_,_,_,_ = sc.spatial_autocorr_sq(grid_new,Ur,Vr, 
+                            transform = False, transform_r = True,gamma=gamma,e_lim=.1,refine=32)
+Lu = np.array(sc.integral_lenght_scale(r_u,tau,eta))
+Lv = np.array(sc.integral_lenght_scale(r_v,tau,eta))
+#########################
+
 #####################################
+""" end of testing (not testing anymore though)"""
+#####################################
+
+
+
+
 # In[]
 
 for dir_mean in Dir:#km5: for each direction. Do you generate different realizations by rotatiing the scanners ?  
