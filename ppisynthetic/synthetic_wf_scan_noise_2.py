@@ -130,18 +130,42 @@ def wind_sim(ae, L, G, seed, N_x, N_y, L_x, L_y, file_in_path,pre):
 # In[Rapid wind field reconstruction]
 
 def dir_rec_rapid(V_a,V_b,a,b,shape):
-    Sa = np.sin(a)/np.sin(a-b)
-    Sb = np.sin(b)/np.sin(a-b)
+    Sa = np.sin(a)/np.sin(b-a)
+    Sb = np.sin(b)/np.sin(b-a)
     Ca = np.cos(a)/np.sin(a-b)
     Cb = np.cos(b)/np.sin(a-b)
     U = (Sb*V_a-Sa*V_b)
-    V = (-Cb*V_a+Ca*V_b)
+    V = (Cb*V_a-Ca*V_b)
     return (np.reshape(U,shape),np.reshape(V,shape))
 
 # In[Numerical lidar] 
 ####################################################################################################################################    
 ## Comment for Konstantinos: This is the one I ended up using, the weighting function from early weights is the one from Alexander Meyer's paper
 ####################################################################################################################################    
+def num_pulsed_lidar2(U_in,V_in, x, y, uv, w, c_ref, s_ref, shapes):
+    # Translate (x,y) field to lidar origin and transform to polar coordinates
+    # Translate    
+    n = shapes[2]
+    m = shapes[3]
+    #Weight Normalization
+    w = w/np.reshape(np.repeat(np.sum(w,axis=1),w.shape[1]),w.shape)
+    
+#    U = np.reshape(interpolate(U_in, vtx, wts, fill_value=np.nan),c_ref.shape)
+#    V = np.reshape(interpolate(V_in, vtx, wts, fill_value=np.nan),c_ref.shape) 
+    U = sp.interpolate.RectBivariateSpline(x, y, U_in.T)(uv[:,0], uv[:,1],grid=False)
+    V = sp.interpolate.RectBivariateSpline(x, y, V_in.T)(uv[:,0], uv[:,1],grid=False)
+    U = np.reshape(U,c_ref.shape)
+    V = np.reshape(V,c_ref.shape)
+    V_L = c_ref*U+s_ref*V  
+    VLw = np.zeros((V_L.shape[0],int((V_L.shape[1]-1)/(n-1))))
+    for i in range(V_L.shape[0]):
+        VLw[i,:] = np.dot(w,np.where(np.isnan(V_L.T[:,i]),0,V_L.T[:,i]))    
+    w_p = np.ones(VLw.shape)/(m-1) 
+    VLw = (VLw[:-1,:]*w_p[:-1,:])     
+     
+    return np.nansum(VLw.reshape(-1,(m-1),VLw.shape[-1]),axis=1)
+
+
 def num_pulsed_lidar(U_in,V_in,vtx,wts,w,c_ref, s_ref, shapes):
     # Translate (x,y) field to lidar origin and transform to polar coordinates
     # Translate    
@@ -207,6 +231,113 @@ def interp_weights2(uv, tri, d = 2):
 ####################################################################################################################################
 ## Comment for Konstantinos: This is the one I ended up using, the weighting function from early weights is the one from Alexander's paper
 ####################################################################################################################################
+""" New early weights pulsed"""
+
+def early_weights_pulsed2(r, phi, tri, dl, dir_mean, d, center, rot_speed, u_mean, n=21, m=51, tri_calc = False):
+    dir_mean = wrap_angle(dir_mean)
+    gamma = -wrap_angle(np.pi-dir_mean)
+    #gamma = -(np.pi-dir_mean)#(2*np.pi-dir_mean)
+    r_unique = r[0,:]
+    phi_unique = phi[:,0]
+    delta_r = np.diff(r_unique)[0]
+    delta_phi = np.diff(phi_unique)[0]
+    r_refine = np.linspace(r_unique[0]-delta_r/2,r_unique[-1]+
+                           delta_r/2,len(r_unique)*(n-1)+1)      
+    phi_refine = np.linspace(phi_unique[0]-delta_phi/2, phi_unique[-1]+
+                             delta_phi/2, len(phi_unique)*(m-1)+1)
+    r_t_refine, phi_t_refine = np.meshgrid(r_refine,phi_refine)   
+    
+    #LOS angles        
+    s_ref = np.sin(phi_t_refine - gamma)#(np.pi-dir_mean))#+np.pi/2-dir_mean)
+    c_ref = np.cos(phi_t_refine - gamma)#(np.pi-dir_mean))#+np.pi/2-dir_mean)  
+    
+    r_t_refine, phi_t_refine = wr.translationpolargrid((r_t_refine, phi_t_refine),d)
+    x_t_refine, y_t_refine = r_t_refine*np.cos(phi_t_refine), r_t_refine*np.sin(phi_t_refine)
+    
+#############################################################################
+    print('Rotation')
+    """ Rotation and translation: we then rotate according to wind direction.
+        To do this we first translate to the position where the midpoint between
+        the two lidars should be (see Figure_rot1,2 in the repo), and then rotate
+        to wind direction, in local coordinates. The wind rose and cartesian
+        have a different orientations that is why I put the 2*pi below)
+    """   
+    y_trans = (center)*np.sin(gamma)
+    x_trans = (center)*(1-np.cos(gamma))
+    S11 = np.cos(gamma)
+    S12 = np.sin(gamma)
+    T1 = np.array([[1,0,x_trans], [0,1, y_trans], [0, 0, 1]])
+    R = np.array([[S11,S12,0], [-S12,S11, 0], [0, 0, 1]])    
+    uv = np.array(np.c_[x_t_refine.flatten(), y_t_refine.flatten(),
+                        np.ones(len(y_t_refine.flatten()))]).T   
+    uv = np.dot(T1,np.dot(R,uv))[:2,:].T 
+    
+#    y_trans = -(center)*np.sin(gamma)
+#    x_trans = -(center)*(1-np.cos(gamma))
+#    T1 = np.array([[1,0,x_trans], [0,1, y_trans], [0, 0, 1]])
+#    uvo = np.dot(T1,(np.c_[uv,np.ones(uv.shape[0])]).T)[:2,:].T
+#    ro = np.sqrt(uvo[:,1]**2+uvo[:,0]**2)
+#    phio = np.arctan2(uvo[:,1],uvo[:,0])
+#    _,phio = wr.translationpolargrid((ro,phio),d)
+#    s_ref = np.reshape(np.sin(phio),x_t_refine.shape)
+#    c_ref = np.reshape(np.cos(phio),x_t_refine.shape)
+    
+    """ Once the scan are translated and rotated, we apply the final
+        displacement due to wind field advection, we calculate the displacements
+        per beam separatdly
+    """ 
+    print('Advection')
+    # Here I suppose that the mesh is equally spaced in phi, and it changes in axis 1,
+    # you can make it more general
+#    phimin = phi_refine[0]
+#    phimax = phi_refine[-1]
+    n_p = len(phi_refine)
+    n_r = len(r_refine)
+    dphi = np.abs(np.diff(phi_refine)[0]) # np.abs(phimin-phimax)/(n_p-1)
+    t_step = dphi/rot_speed
+    t_total = t_step*(n_p-1)#np.abs(phimin-phimax)/rot_speed
+    #Below it is t_total+t_step to include the last point
+    t_array = np.arange(0,t_total+t_step,t_step)
+    
+    """ The displacements array is the same for both scans with the same shape as 
+        x_0_t, x_1_t, y_0_t and y_1_t so I repeat the column of displacements per beam 
+        nr0 times, or the number of range gates along each beam
+    """
+    print('disp')
+    disp_x = np.array([list(u_mean*t_array),]*n_r).transpose()
+    """ No displacement in y, since the global coordinates are the streamwise and
+    lateral components"""
+    disp_y = np.zeros(disp_x.shape)
+    #Just to check that everything is ok
+    """ Finally, the scans translated, rotated and advected to estimate the domain size
+    """
+    print(uv.shape, disp_x.flatten().shape)
+    
+    uv = uv - np.c_[disp_x.flatten(),disp_y.flatten()]
+
+    if tri_calc:    
+        vtx, wts = interp_weights2(uv, tri, d = 2)
+    else:
+        vtx, wts = [],[]
+          
+    aux_1 = np.reshape(np.repeat(r_unique,len(r_refine),axis = 0),(len(r_unique),len(r_refine)))
+    aux_2 = np.reshape(np.repeat(r_refine,len(r_unique)),(len(r_refine),len(r_unique))).T
+    print('weights in each beam')
+    r_F = aux_1-aux_2
+    rp = dl/(2*np.sqrt(np.log(2)))
+    erf = sp.special.erf((r_F+.5*delta_r)/rp)-sp.special.erf((r_F-.5*delta_r)/rp)
+    w = (1/2/delta_r)*erf   
+    shapes = np.array([phi_t_refine.shape[0], phi_t_refine.shape[1], n, m])        
+    return (vtx, wts, w, c_ref, s_ref, shapes,uv,r_t_refine, phi_t_refine)#(w, c_ref, s_ref, shapes,uv)#
+
+
+""" end of new early weight"""
+
+
+#################################################################
+
+
+
 def early_weights_pulsed(r, phi, dl, dir_mean , tri, d, center,beam_orig,scanner_id,L_x,L_y, n=21, m=51):
     gamma = (2*np.pi-dir_mean)#km5: why this rotation ?
     r_unique = np.unique(r)#km5:remove the repeating radial coorddinates (local cs)
@@ -348,25 +479,62 @@ def geom_polar_grid(rmin,rmax,nr,phimin,phimax,nphi,d):
     #km: create nphi grid points on azimuth direction
     """answer la: yes"""
     r_g, phi_g = np.meshgrid(r,phi)
+    phi_g = np.where(phi_g<0 , 2*np.pi+phi_g, phi_g)
     #km: construct the polar grid and save cordinates in r_g and phi_g
     """answer la: yes"""
-    r_t,phi_t = wr.translationpolargrid((r_g, np.pi-phi_g),d/2)
+    r_t,phi_t = wr.translationpolargrid((r_g, phi_g),d/2)
     #translate the polar grid
     """answer la: yes"""
     return (r_g, phi_g, r_t, phi_t)
 
 # In[New function, check it out]
+def wrap_angle(x):
+    return np.where(x<0 , 2*np.pi+x, x)
 
-def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed):    
+def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed, dir_mean,tri_ret = True):
+    """WRAP TO 0 TO 2*PI"""
+    dir_mean = wrap_angle(dir_mean)
     # Polar grid 2 horizontal scans
     rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = rp0
     rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = rp1 
     d = orig1-orig0     
-    r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)#km2: you translate it again because you pass only the tuple as an input
-    r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,d)
-    #km2: I think that this should be changed in the new version where we have to triangulate the whole long field
-    """ This is new..."""
+    r_0_g, phi_0_g, r_0_t, phi_0_t = geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,d)#km2: you translate it again because you pass only the tuple as an input
+    r_1_g, phi_1_g, r_1_t, phi_1_t = geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,-d)
+    ################################
+    """ No wind direction yet just to locate the scans before any movement
+    """
+    x_0_t, y_0_t = r_0_t*np.cos(phi_0_t), r_0_t*np.sin(phi_0_t)
+    x_1_t, y_1_t = r_1_t*np.cos(phi_1_t), r_1_t*np.sin(phi_1_t)
+    """ Rotation and translation: we then rotate according to wind direction.
+        To do this we first translate to the position that the midpoint between
+        the two lidars should be (see Figure_rot1,2 in the repo), and then rotate
+        to wind direction, in local coordinates. The wind rose and cartesian
+        have a different orientations that is why I put the 2*pi below)
+    """
+    ind_max = np.argsort(np.abs(np.r_[x_0_t.flatten(),x_1_t.flatten()]))
+    """ center is half way to the most distant point of the scan, in y
+    """
+    center = np.r_[x_0_t.flatten(),x_1_t.flatten()][ind_max[-1]]/2
+    #print(dir_mean*180/np.pi)
+    gamma = -wrap_angle(np.pi-dir_mean)
+    y_trans = (center)*np.sin(gamma)
+    x_trans = (center)*(1-np.cos(gamma))
+    S11 = np.cos(gamma)
+    S12 = np.sin(gamma)
+    T1 = np.array([[1,0,x_trans], [0,1, y_trans], [0, 0, 1]])
+    R = np.array([[S11,S12,0], [-S12,S11, 0], [0, 0, 1]])    
+    Xx0 = np.array(np.c_[x_0_t.flatten(), y_0_t.flatten(),
+                                    np.ones(len(y_0_t.flatten()))]).T
+    Xx1 = np.array(np.c_[x_1_t.flatten(), y_1_t.flatten(),
+                                    np.ones(len(y_1_t.flatten()))]).T
     
+    Xx0 = np.dot(T1,np.dot(R,Xx0))[:2,:].T
+    Xx1 = np.dot(T1,np.dot(R,Xx1))[:2,:].T
+    
+    """ Once both scans are translated and rotated, we apply the final
+        displacement due to wind field advection, we calculate the displacements
+        per beam separatdly
+    """    
     # Here I suppose that the mesh is equally spaced in phi, and it changes in axis 1,
     # you can make it more general
     dphi = np.abs(phimin0-phimax0)/(np0-1)
@@ -375,34 +543,34 @@ def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed):
     #Below it is t_total+t_step to include the last point
     t_array = np.arange(0,t_total+t_step,t_step)
     
+    """ The displacements array is the same for both scans with the same shape as 
+        x_0_t, x_1_t, y_0_t and y_1_t so I repeat the column of displacements per beam 
+        nr0 times, or the number of range gates along each beam
+    """
     disp_x = np.array([list(u_mean*t_array),]*nr0).transpose()
+    """ No displacement in y, since the global coordinates are the streamwise and
+    lateral components"""
+    disp_y = np.zeros(disp_x.shape)
+    #Just to check that everything is ok
+    #print(disp_x, disp_y)
+    """ Finally, the scans translated, rotated and advected to estimate the domain size
+    """
+    Xx0 = Xx0 - np.c_[disp_x.flatten(),disp_y.flatten()]
+    Xx1 = Xx1 - np.c_[disp_x.flatten(),disp_y.flatten()]
+    """ Finally, the domain size
+    """
+    x_max = np.max(np.r_[Xx0[:,0],Xx1[:,0]])
+    x_min = np.min(np.r_[Xx0[:,0],Xx1[:,0]])    
+    y_max = np.max(np.r_[Xx0[:,1],Xx1[:,1]])
+    y_min = np.min(np.r_[Xx0[:,1],Xx1[:,1]])
     
-    print(disp_x)
+    """ Next step is just to return the scans (rta stands for rotated,
+       translated, advected), they will be refined in  early_weights routine.
+       Nevetheless, both functions could be merged in one function.
+    """
+    x_0_rta, y_0_rta = np.reshape(Xx0[:,0],x_0_t.shape), np.reshape(Xx0[:,1],x_0_t.shape)
+    x_1_rta, y_1_rta = np.reshape(Xx1[:,0],x_1_t.shape), np.reshape(Xx1[:,1],x_1_t.shape)
     
-    # Total time per scan, this assumes both scans have the same speed
-    x0 = (r_0_t*np.cos(phi_0_t) - disp_x).flatten()
-    x1 = (r_1_t*np.cos(phi_1_t) - disp_x).flatten()
-    y0 = (r_0_t*np.sin(phi_0_t)).flatten()
-    y1 = (r_1_t*np.sin(phi_1_t)).flatten() 
-    
-        ###########################
-    # Just for plottinh, no displacement
-    x00 = (r_0_t*np.cos(phi_0_t)).flatten()
-    x11 = (r_1_t*np.cos(phi_1_t)).flatten()
-    y00 = (r_0_t*np.sin(phi_0_t)).flatten()
-    y11 = (r_1_t*np.sin(phi_1_t)).flatten()
-    plt.figure()
-    plt.scatter(x0, y0)
-    plt.scatter(x1, y1)
-    plt.scatter(x00, y00)
-    plt.scatter(x11, y11)
-    ####################
-
-    
-    x_max = np.max(np.r_[x0,x1])#km: finds the maximum x in cartesian coordinates by by taking into account both scaners
-    x_min = np.min(np.r_[x0,x1])    
-    y_max = np.max(np.r_[y0,y1])
-    y_min = np.min(np.r_[y0,y1]) 
     
     L_x = x_max-x_min
     L_y = y_max-y_min
@@ -411,10 +579,15 @@ def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed):
     y = np.linspace(y_min,y_max,N_y)
 
     grid = np.meshgrid(x,y) 
+    
+    print(grid[0].shape,x.shape)
+    
+    if tri_ret:
+        tri = Delaunay(np.c_[grid[0].flatten(),grid[1].flatten()], qhull_options = "QJ")
+    else:
+        tri = []
 
-    tri = Delaunay(np.c_[grid[0].flatten(),grid[1].flatten()], qhull_options = "QJ")
-
-    _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, np.pi-phi_1_g),(r_0_g, np.pi-phi_0_g),-d)
+    _,tri_overlap,_,_,_,_,_,_ = wr.grid_over2((r_1_g, phi_1_g),(r_0_g, phi_0_g),d)
 
     r_min=np.min(np.sqrt(tri_overlap.x**2+tri_overlap.y**2))
 
@@ -422,12 +595,14 @@ def geom_syn_field2(rp0, rp1, N_x, N_y, u_mean, rot_speed):
 
     n_next = int(2**np.ceil(np.log(L_y/d_grid+1)/np.log(2)))
 
-    x_new = np.linspace(x.min(),x.max(),n_next)
-    y_new = np.linspace(y.min(),y.max(),n_next)
+    xn = np.r_[x_0_t.flatten(), x_1_t.flatten()]
+    yn = np.r_[y_0_t.flatten(), y_1_t.flatten()]
+
+    x_new = np.linspace(xn.min(),xn.max(),n_next)
+    y_new = np.linspace(yn.min(),yn.max(),n_next)
     grid_new = np.meshgrid(x_new,y_new)
     
-    return (L_x, L_y, grid, x, y, tri, grid_new,d)
-
+    return (L_x, L_y, grid, x, y, tri, grid_new,d, x_0_rta, y_0_rta, x_1_rta, y_1_rta, center)
 
 # In[]
     

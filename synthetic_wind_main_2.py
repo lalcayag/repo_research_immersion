@@ -2,11 +2,6 @@
 
 # In[]
 """
-####################################################################################################################################
-## Comment:
-This is the main code that uses a bunch of functions, I recommend we check dependencies 
-and then you can clone the necessary directories from github.
-####################################################################################################################################  
 @author: lalc
 """
 import numpy as np
@@ -31,6 +26,26 @@ import ppiscanprocess.spectra_construction as sc
 
 import pickle
 
+import matplotlib.ticker as ticker
+import matplotlib
+matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams['text.latex.unicode'] = True
+
+# In[]
+class FormatScalarFormatter(matplotlib.ticker.ScalarFormatter):
+    def __init__(self, fformat="%1.1f", offset=True, mathText=True):
+        self.fformat = fformat
+        matplotlib.ticker.ScalarFormatter.__init__(self,useOffset=offset,
+                                                        useMathText=mathText)
+    def _set_format(self, vmin, vmax):
+        self.format = self.fformat
+        if self._useMathText:
+            self.format = '$%s$' % matplotlib.ticker._mathdefault(self.format)
+
+fmt = FormatScalarFormatter("%.2f")
+
+def fm(x, pos=None):
+    return r'${}$'.format('{:.2f}'.format(x).split('f')[0])
 # In[Input files]
 
 root = tkint.Tk()
@@ -55,7 +70,7 @@ N_y = 2048
 
 # Mean wind speed and Direction
 #Dir = np.linspace(90,270,7)*np.pi/180
-Dir = [0*math.pi/180]
+Dir = [0*np.pi/180]
 #km: a vector of 7 directions from 90 to 270 deg in rads
 """answer la: yes""" 
 
@@ -68,14 +83,15 @@ u_mean = 15
 """km:definition of the scaner 0 minimum and maximum radial distance
 minimum and maximum azimuth angle origin as an array x_0,y_0"""
 """answer la: yes""" 
-rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = 105,7000,198,256,344,45,np.array([6322832.3,0])
+""" la9: Now the azimuth angles and locations are transform to cartesian right away y-axis = N-S"""
+rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0 = 105,7000,198,90-256,90-344,45,np.array([0,6322832.3])
 rp0 = (rmin0,rmax0,nr0,phimin0,phimax0,np0,orig0)
 #km: tuple that contains the definition of the scanner0
 """answer la: yes""" 
 
 # Scan 1 geometry input
 # rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1
-rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = 105,7000,198,196,284,45,np.array([6327082.4,0])
+rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1 = 105,7000,198,90-284,90-196,45,np.array([0,6327082.4])
 rp1 = (rmin1,rmax1,nr1,phimin1,phimax1,np1,orig1)
 
 # Grids, polar and cartesian
@@ -84,12 +100,17 @@ d = orig1-orig0
 """answer la: yes""" 
 
 # Polar grids for Scan 0 (local and translated)
-r_0_g, phi_0_g, r_0_t, phi_0_t = sy.geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,-d)
+r_0_g, phi_0_g, r_0_t, phi_0_t = sy.geom_polar_grid(rmin0,rmax0,nr0,phimin0,phimax0,np0,d)
 
 # Polar grids for Scan 1 (local and translated)
-r_1_g, phi_1_g, r_1_t, phi_1_t = sy.geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1, d)
+r_1_g, phi_1_g, r_1_t, phi_1_t = sy.geom_polar_grid(rmin1,rmax1,nr1,phimin1,phimax1,np1,-d)
+
+plt.figure()
+plt.scatter((r_0_t*np.cos(phi_0_t)).flatten(),(r_0_t*np.sin(phi_0_t)).flatten())
+plt.scatter((r_1_t*np.cos(phi_1_t)).flatten(),(r_1_t*np.sin(phi_1_t)).flatten())
 
 L_x, L_y, grid, x, y, tri, grid_new, d = sy.geom_syn_field(rp0, rp1, N_x, N_y) 
+
 print("L_x=",L_x,"L_y=",L_y)
 #km4: Return the size of the in general rectangular (but now square) domain. A structured cartesian grid with N_x x N_y points. The coordinates of the grid points x y.
 #km4: Another structured uniform grid for the same domain but with different spacing and the distance of the two scanners d. 
@@ -106,8 +127,8 @@ dl = 75
 # From Cartesian coord. to polar in global grid 
 r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
 phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
-r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
-r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
+r_tri_1_s, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
+r_tri_0_s, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
 """answer la4: So this wis just step to recover the original azimuth angle for each scan (local coordinates for each scan)
               this time in the corresponding points of the reconstructed wind field in cartesian coordinates,
               to be used in wind field reconstruction""" 
@@ -123,6 +144,244 @@ ae,L,G,seed = np.meshgrid(ae,L,G,-seed)
 sym = []
 no_sym = []
 geom_param0 = []
+
+#############################################################
+# In[]
+""" This is the testing of the new functions I wrote and that
+    you can use or compare to the ones you have writen"""
+##############################################################
+"""la9(?): Testing eom_syn_field2() and earlyweights2()"""
+
+# A plotting function
+def plot_mesh(x,y,x0,y0,title):
+    import pylab as pl
+    from matplotlib.collections import LineCollection
+
+    pl.figure(figsize=(8, 8))
+    
+    hlines = np.column_stack(np.broadcast_arrays(x[0], y, x[-1], y))
+    vlines = np.column_stack(np.broadcast_arrays(x, y[0], x, y[-1]))
+    lines = np.concatenate([hlines, vlines]).reshape(-1, 2, 2)
+    line_collection = LineCollection(lines, color="grey", linewidths=1,alpha=.3)
+    ax = pl.gca()
+    ax.set_aspect('equal')
+    ax.use_sticky_edges = False
+    ax.margins(0.07)
+    ax.set_title(title)
+    ax.add_collection(line_collection)
+    plt.plot([x0[-1],x0[0]], [y0[0],y0[0]], color='grey')
+    plt.plot([x0[0],x0[0]], [y0[0],y0[-1]], color='grey')
+    plt.plot([x0[0],x0[-1]], [y0[-1],y0[-1]], color='grey')
+    plt.plot([x0[-1],x0[-1]], [y0[-1],y0[0]], color='grey')
+    return []
+
+dir_mean = np.array([0, 90, 45, 270, 180])*np.pi/180
+""" to cartesian"""
+dir_mean = np.pi/2-dir_mean
+dir_tit = (np.pi/2-dir_mean)*180/np.pi
+u_mean = [0,15,100]
+rot = 2 #2 degrees per second, rotational speed of the scan or scanning speed
+
+L_x0,L_y0,grid0,x0,y0,tri0,_,_,x_0_rta0,y_0_rta0,x_1_rta0,y_1_rta0,center0 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[0], rot, dir_mean[0],tri_ret = False)
+L_x1,L_y1,grid1,x1,y1,tri1,_,_,x_0_rta1,y_0_rta1,x_1_rta1,y_1_rta1,center1 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[1], rot, dir_mean[0],tri_ret = False)
+L_x2,L_y2,grid2,x2,y2,tri2,_,_,x_0_rta2,y_0_rta2,x_1_rta2,y_1_rta2,center2 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[1], rot, dir_mean[4],tri_ret = False)
+L_x3,L_y3,grid3,x3,y3,tri3,_,_,x_0_rta3,y_0_rta3,x_1_rta3,y_1_rta3,center3 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[1], rot, dir_mean[1], tri_ret = False)
+L_x4,L_y4,grid4,x4,y4,tri4,_,_,x_0_rta4,y_0_rta4,x_1_rta4,y_1_rta4,center4 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[1], rot, dir_mean[3], tri_ret = False)
+L_x5,L_y5,grid5,x5,y5,tri5,_,_,x_0_rta5,y_0_rta5,x_1_rta5,y_1_rta5,center5 = sy.geom_syn_field2(rp0, rp1,
+                                                                                        N_x, N_y, u_mean[1], rot, dir_mean[2], tri_ret = False)
+
+plot_mesh(x0[::16],y0[::16],x0, y0, title = '$U _{mean}$ ='+'%.2f' %u_mean[0]+', Direction = '+'%.2f' %(dir_tit[0]))
+plt.scatter(x_0_rta0.flatten(),y_0_rta0.flatten())
+plt.scatter(x_1_rta0.flatten(),y_1_rta0.flatten())
+
+plot_mesh(x1[::16],y1[::16],x1, y1, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[0]))
+plt.scatter(x_0_rta1.flatten(),y_0_rta1.flatten())
+plt.scatter(x_1_rta1.flatten(),y_1_rta1.flatten())
+
+plot_mesh(x2[::16],y2[::16],x2, y2, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[4]))
+plt.scatter(x_0_rta2.flatten(),y_0_rta2.flatten())
+plt.scatter(x_1_rta2.flatten(),y_1_rta2.flatten())
+
+plot_mesh(x3[::16],y3[::16],x3, y3, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[1]))
+plt.scatter(x_0_rta3.flatten(),y_0_rta3.flatten())
+plt.scatter(x_1_rta3.flatten(),y_1_rta3.flatten())
+
+plot_mesh(x4[::16],y4[::16],x4, y4, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[3]))
+plt.scatter(x_0_rta4.flatten(),y_0_rta4.flatten())
+plt.scatter(x_1_rta4.flatten(),y_1_rta4.flatten())
+
+plot_mesh(x5[::16],y5[::16],x5, y5, title = '$U _{mean}$ ='+'%.2f' %u_mean[1]+', Direction = '+'%.2f' %(dir_tit[2]))
+plt.scatter(x_0_rta5.flatten(),y_0_rta5.flatten())
+plt.scatter(x_1_rta5.flatten(),y_1_rta5.flatten())
+######################################################################
+# In[]
+######################################################################
+""" The above was just to try diffrent speeds and the efect on the sampling positions,
+here you can find the real testing, woth the final reconstruction
+""" 
+i = 2
+j = 1
+tri_calc = False
+dir_mean = np.array([0, 90, 45, 270, 180])*np.pi/180
+""" to cartesian"""
+dir_mean = np.pi/2-dir_mean
+dir_tit = (np.pi/2-dir_mean)*180/np.pi
+u_mean = [0,40,100]
+rot = 2 #2 degrees per second, rotational speed of the scan or scanning speed
+L_x, L_y, grid, x, y, tri, grid_new, d, x_0_rta, y_0_rta, x_1_rta, y_1_rta, center = sy.geom_syn_field2(rp0, rp1,         
+                                                                                                        N_x, N_y, u_mean[j], rot, dir_mean[i],tri_ret = tri_calc)
+
+plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[j]+', Direction = '+'%.2f' %(dir_tit[i]))
+plt.scatter(x_0_rta.flatten(),y_0_rta.flatten())
+plt.scatter(x_1_rta.flatten(),y_1_rta.flatten())
+
+# The dir where the simulations will be saved or read
+root = tkint.Tk()
+file_in_path = tkint.filedialog.askdirectory(parent=root,title='Choose a sim. Input dir')
+root.destroy()
+################################################################################
+# Wind Field generation, you can insert a loop
+#u, v = sy.wind_sim(.025, 300, 3.5, -1, 2048, 2048, L_x, L_y, file_in_path, pre = 'res_im')
+#
+#U = np.reshape(u,grid[0].shape).T
+#V = np.reshape(v,grid[0].shape).T
+################################################################################
+#Or you can read it from a file
+u = np.reshape(np.fromfile(file_in_path+'/res_imu3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
+v = np.reshape(np.fromfile(file_in_path+'/res_imv3003.50.025-1', dtype=np.float32),(N_x,N_y)).T
+
+U_in = u_mean[1]*np.ones(u.shape) + u
+V_in = np.zeros(u.shape)+v
+"""This field is just to try :)"""
+U_in = np.array([list(u_mean[1]*np.arange(0,u.shape[0])/u.shape[0]),]*u.shape[1]).T# + u
+V_in = np.zeros(u.shape)#v
+
+vtx0, wts0, w0, c_ref0, s_ref0, shapes,uv0,r_refine0,phi_refine0 = sy.early_weights_pulsed2(r_0_g,phi_0_g, tri,
+                                                          dl, dir_mean[i] , d/2,
+                                                          center,rot*np.pi/180, u_mean[j], tri_calc = tri_calc)
+
+vtx1, wts1, w1, c_ref1, s_ref1, shapes,uv1,r_refine1,phi_refine1 = sy.early_weights_pulsed2(r_1_g,phi_1_g, tri,
+                                                          dl, dir_mean[i] , -d/2,
+                                                          center,rot*np.pi/180, u_mean[j], tri_calc = tri_calc)
+
+plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[0]+', $Direction$ = '+'%.2f' %dir_tit[i])
+plt.scatter(uv0[::32,0],uv0[::32,1],c = wrap_angle(np.arctan2(s_ref0.flatten()[::32],c_ref0.flatten()[::32]))*180/np.pi,cmap='jet')
+plt.colorbar()
+plot_mesh(x[::16],y[::16],x, y, title = '$U _{mean}$ ='+'%.2f' %u_mean[0]+', $Direction$ = '+'%.2f' %dir_tit[i])
+plt.scatter(uv1[::32,0],uv1[::32,1],c = wrap_angle(np.arctan2(s_ref1.flatten()[::32],c_ref1.flatten()[::32]))*180/np.pi,cmap='jet')
+plt.colorbar()
+########################################
+#This is just to verify the right sampling
+
+#U0 = sp.interpolate.RectBivariateSpline(x, y, U_in.T)(uv0[:,0], uv0[:,1],grid=False)
+#V0 = sp.interpolate.RectBivariateSpline(x, y, V_in.T)(uv0[:,0], uv0[:,1],grid=False)
+#U0 = np.reshape(U0,c_ref0.shape)
+#V0 = np.reshape(V0,c_ref0.shape)
+#V_L0 = c_ref0*U0 + s_ref0*V0 
+#
+#n0 = shapes[2]
+#m0 = shapes[3]
+##Weight Normalization
+#w0 = w0/np.reshape(np.repeat(np.sum(w0,axis=1),w0.shape[1]),w0.shape)
+#VLw0 = np.zeros((V_L0.shape[0],int((V_L0.shape[1]-1)/(n0-1))))
+#for i in range(V_L0.shape[0]):
+#    VLw0[i,:] = np.dot(w0,np.where(np.isnan(V_L0.T[:,i]),0,V_L0.T[:,i]))  
+#w_p0 = np.ones(VLw0.shape)/(m0-1) 
+#VLw00 = (VLw0[:-1,:]*w_p0[:-1,:]) 
+#
+#VLw000 = np.nansum(VLw00.reshape(-1,(m0-1),VLw00.shape[-1]),axis=1)
+#
+#U1 = sp.interpolate.RectBivariateSpline(x, y, U_in)(uv1[:,0], uv1[:,1],grid=False)
+#V1 = sp.interpolate.RectBivariateSpline(x, y, V_in)(uv1[:,0], uv1[:,1],grid=False)
+#U1 = np.reshape(U1,c_ref1.shape)
+#V1 = np.reshape(V1,c_ref1.shape)
+#V_L1 = c_ref1*U1 + s_ref1*V1 
+#plot_mesh(x[::16],y[::16],x, y, title = '$U_{mean}$ ='+'%.2f' %u_mean[0]+', $Direction$ = '+'%.2f' %dir_tit[i])
+#plt.scatter(uv0[::32,0],uv0[::32,1],c = V_L0.flatten()[::32], cmap='jet')
+#plt.colorbar()
+#plot_mesh(x[::16],y[::16],x, y, title = '$U_{mean}$ ='+'%.2f' %u_mean[0]+', $Direction$ = '+'%.2f' %dir_tit[i])
+#plt.scatter(uv1[::32,0],uv1[::32,1],c = V_L1.flatten()[::32], cmap='jet')
+#plt.colorbar()
+#########################################
+##Numerical lidar sampling
+
+if tri_calc:
+    vlos0 = sy.num_pulsed_lidar(U_in,V_in,vtx0,wts0,w0,c_ref0, s_ref0, shapes)
+    vlos1 = sy.num_pulsed_lidar(U_in,V_in,vtx1,wts1,w1,c_ref1, s_ref1, shapes)
+else:
+    vlos0 = sy.num_pulsed_lidar2(U_in,V_in,x,y,uv0,w0,c_ref0, s_ref0, shapes)
+    vlos1 = sy.num_pulsed_lidar2(U_in,V_in,x,y,uv1,w1,c_ref1, s_ref1, shapes) 
+
+#Interpolation to cartesian grid
+vlos0_int_sq = sp.interpolate.griddata(np.c_[(r_0_t*np.cos(phi_0_t)).flatten(),
+                                             (r_0_t*np.sin(phi_0_t)).flatten()],
+                                             vlos0.flatten(), (grid_new[0].flatten(),
+                                             grid_new[1].flatten()), method='cubic')
+vlos1_int_sq = sp.interpolate.griddata(np.c_[(r_1_t*np.cos(phi_1_t)).flatten(),
+                                             (r_1_t*np.sin(phi_1_t)).flatten()],
+                                             vlos1.flatten(), (grid_new[0].flatten(),
+                                             grid_new[1].flatten()), method='cubic')
+
+vlos0_int_sq = np.reshape(vlos0_int_sq,grid_new[0].shape)
+vlos1_int_sq = np.reshape(vlos1_int_sq,grid_new[0].shape)
+
+r_tri_s = np.sqrt(grid_new[0]**2 + grid_new[1]**2)
+phi_tri_s = np.arctan2(grid_new[1],grid_new[0])
+_, phi_tri_1_s = wr.translationpolargrid((r_tri_s, phi_tri_s),d/2)
+_, phi_tri_0_s = wr.translationpolargrid((r_tri_s, phi_tri_s),-d/2)
+
+phi0sq = phi_tri_0_s
+phi0sq[np.isnan(vlos0_int_sq)] = np.nan
+
+phi1sq = phi_tri_1_s
+phi1sq[np.isnan(vlos1_int_sq)] = np.nan
+
+Ur,Vr = sy.dir_rec_rapid(vlos0_int_sq.flatten(),vlos1_int_sq.flatten(),
+                         wrap_angle(phi0sq).flatten(),wrap_angle(phi1sq).flatten(),
+                         grid_new[0].shape)
+
+plt.figure()
+plt.contourf(grid_new[0], grid_new[1], Ur, cmap='jet')
+plt.colorbar()
+plt.figure()
+plt.contourf(grid_new[0], grid_new[1], Vr,np.linspace(-18,-11,10), cmap='jet')
+plt.colorbar()
+
+# Some plots that could be useful
+#plt.figure()
+#plt.contourf(r_0_t*np.cos(phi_0_t), r_0_t*np.sin(phi_0_t), vlos0,30, cmap='jet')
+#plt.colorbar()
+#plt.figure()
+#plt.contourf(r_1_t*np.cos(phi_1_t), r_1_t*np.sin(phi_1_t), vlos1, 30, cmap='jet')
+#plt.colorbar()
+#
+#plt.figure()
+#plt.contourf(grid_new[0], grid_new[1], vlos0_int_sq, cmap='jet')
+#plt.contourf(grid_new[0], grid_new[1], vlos1_int_sq, cmap='jet')
+#plt.colorbar()
+
+#plt.figure()
+#plt.contourf(grid_new[0], grid_new[1], wrap_angle(phi0sq)*180/np.pi, 20, cmap='jet')
+#plt.colorbar()
+#plt.contourf(grid_new[0], grid_new[1], wrap_angle(phi1sq)*180/np.pi, 20, cmap='rainbow')
+#plt.colorbar()
+
+#plt.figure()
+#plt.contourf(grid[0], grid[1], U_in, cmap='jet')
+#plt.colorbar()
+#
+#plt.figure()
+#plt.contourf(grid[0], grid[1], V_in, cmap='jet')
+#plt.colorbar()
+####################################
+""" end of testing"""
+#####################################
+# In[]
 
 for dir_mean in Dir:#km5: for each direction. Do you generate different realizations by rotatiing the scanners ?  
   
